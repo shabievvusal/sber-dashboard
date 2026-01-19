@@ -86,9 +86,14 @@ def ensure_schema() -> None:
 # Ensure DB schema exists at startup
 try:
     ensure_schema()
+    import sys
+    print(f"INFO: Barcode database schema initialized successfully at {DB_PATH}", file=sys.stderr)
 except Exception as e:
     import sys
-    print(f"WARNING: Could not initialize barcode database schema: {e}", file=sys.stderr)
+    print(f"ERROR: Could not initialize barcode database schema: {e}", file=sys.stderr)
+    print(f"DB_PATH: {DB_PATH}", file=sys.stderr)
+    print(f"DB_PATH exists: {os.path.exists(DB_PATH)}", file=sys.stderr)
+    print(f"DB directory exists: {os.path.exists(os.path.dirname(DB_PATH))}", file=sys.stderr)
     print(f"Barcode generator may not work until database is accessible.", file=sys.stderr)
 
 @barcode_bp.route("/")

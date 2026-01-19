@@ -87,8 +87,6 @@ function getBasePath() {
 }
 
 function buildAnalyzUrl(path) {
-    // Всегда используем относительный путь, чтобы запросы шли через nginx
-    // НИКОГДА не используем window.location.origin для формирования абсолютного URL
     if (!path.startsWith('/')) {
         path = `/${path}`;
     }
@@ -96,18 +94,38 @@ function buildAnalyzUrl(path) {
     // Получаем актуальный базовый путь
     const basePath = getBasePath();
     
+    // Формируем полный путь
+    let fullPath;
     if (basePath) {
         // Убеждаемся, что путь не начинается с базового пути
         if (path.startsWith(basePath)) {
-            return path;
+            fullPath = path;
+        } else {
+            fullPath = `${basePath}${path}`;
         }
-        const fullPath = `${basePath}${path}`;
-        console.log('[Barcode] Building URL:', path, '->', fullPath);
-        return fullPath;
+    } else {
+        fullPath = path;
     }
     
-    // Если базовый путь не установлен, возвращаем путь как есть
-    return path;
+    // Если iframe загружен напрямую на порту 5051 или 5050 (минуя nginx),
+    // нужно использовать абсолютный URL с портом 3001 (nginx)
+    if (typeof window !== 'undefined' && window.location) {
+        const port = window.location.port;
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        
+        if (port === '5051' || port === '5050') {
+            // Формируем абсолютный URL с портом 3001 (nginx)
+            const nginxPort = '3001';
+            const absoluteUrl = `${protocol}//${hostname}:${nginxPort}${fullPath}`;
+            console.log('[Barcode] Direct access detected on port', port, '- using absolute URL:', absoluteUrl);
+            return absoluteUrl;
+        }
+    }
+    
+    // В остальных случаях используем относительный путь
+    console.log('[Barcode] Building URL:', path, '->', fullPath);
+    return fullPath;
 }
 
 class BarcodeApp {

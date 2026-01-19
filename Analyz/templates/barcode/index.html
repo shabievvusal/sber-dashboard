@@ -217,7 +217,15 @@
                 console.log('[Barcode] Location:', window.location.href);
                 console.log('[Barcode] Pathname:', window.location.pathname);
                 console.log('[Barcode] Port:', window.location.port);
+                console.log('[Barcode] Hostname:', window.location.hostname);
                 console.log('[Barcode] Base path set to:', window.__ANALYZ_BASE_PATH);
+                
+                // Если iframe загружен напрямую на порту 5051/5050, предупреждаем
+                if (port === '5051' || port === '5050') {
+                    console.warn('[Barcode] WARNING: Iframe loaded directly on port', port);
+                    console.warn('[Barcode] This should not happen in production. Iframe should load through nginx on port 3001.');
+                    console.warn('[Barcode] Requests will be redirected to port 3001 automatically.');
+                }
             }
         })();
     </script>

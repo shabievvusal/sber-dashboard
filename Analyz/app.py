@@ -2253,16 +2253,35 @@ def health_check():
         db_path = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "database.sqlite3"))
         db_ok = os.path.exists(db_path) or os.path.exists(os.path.dirname(db_path))
         
+        # Проверяем доступность базы данных для штрихкодов (та же база, но проверяем таблицу)
+        barcode_db_ok = False
+        barcode_db_error = None
+        try:
+            import sqlite3
+            if os.path.exists(db_path):
+                conn = sqlite3.connect(db_path, timeout=2.0)
+                cur = conn.cursor()
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='products'")
+                result = cur.fetchone()
+                conn.close()
+                barcode_db_ok = result is not None
+            else:
+                barcode_db_error = "Database file does not exist"
+        except Exception as e:
+            barcode_db_error = str(e)
+        
         # Проверяем доступность директории данных
         data_dir_ok = os.path.exists(DATA_DIR) or os.path.isdir(DATA_DIR)
         
-        status = "healthy" if (db_ok and data_dir_ok) else "degraded"
+        status = "healthy" if (db_ok and data_dir_ok and barcode_db_ok) else "degraded"
         return jsonify({
             "status": status,
             "service": "analyz",
             "timestamp": datetime.now().isoformat(),
             "checks": {
                 "database": "ok" if db_ok else "warning",
+                "barcode_database": "ok" if barcode_db_ok else "warning",
+                "barcode_database_error": barcode_db_error,
                 "data_directory": "ok" if data_dir_ok else "warning"
             }
         }), 200 if status == "healthy" else 503
