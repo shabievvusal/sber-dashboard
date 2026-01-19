@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import TaskList from '../components/TaskList';
@@ -189,7 +189,7 @@ export default function ManagerDashboard() {
           date: lastDay
         };
         // Сохраняем в кэш
-        setDaySummaryCache(prev => ({ ...prev, [lastDay]: summary }));
+        setDaySummaryCache((prev: Record<string, DaySummary>) => ({ ...prev, [lastDay]: summary }));
         setLastDaySummary(summary);
       } else {
         setLastDaySummary(null);
@@ -219,7 +219,7 @@ export default function ManagerDashboard() {
           date: date
         };
         // Сохраняем в кэш
-        setDaySummaryCache(prev => ({ ...prev, [date]: summary }));
+        setDaySummaryCache((prev: Record<string, DaySummary>) => ({ ...prev, [date]: summary }));
         setLastDaySummary(summary);
       }
     } catch (error) {
@@ -236,9 +236,9 @@ export default function ManagerDashboard() {
       const today = new Date().toISOString().split('T')[0];
       const loadedData: Record<string, Record<string, number>> = {};
       
-      companyOperations.forEach(op => {
+      companyOperations.forEach((op: string) => {
         loadedData[op] = {};
-        hours.forEach(h => {
+        hours.forEach((h: string) => {
           loadedData[op][h] = 0;
         });
       });
@@ -321,7 +321,7 @@ useEffect(() => {
   const maxStart = Math.max(0, hours.length - windowSize);
   const now = new Date();
   const currentHour = now.getHours();
-  const currentIdx = hours.findIndex(h => {
+  const currentIdx = hours.findIndex((h: string) => {
     const [hourNum] = h.split(':');
     return parseInt(hourNum) === currentHour;
   });
@@ -344,7 +344,7 @@ const centerHour = useMemo(() => {
 
 const shiftHourWindow = (direction: number) => {
   if (hours.length <= windowSize) return;
-  setWindowStart(prev => {
+  setWindowStart((prev: number) => {
     const next = Math.max(0, Math.min(prev + direction, maxWindowStart));
     return next;
   });
@@ -395,7 +395,7 @@ const shiftHourWindow = (direction: number) => {
     const currentHour = now.getHours();
     
     // Находим текущий час в списке hours
-    const currentHourStr = hours.find(h => {
+    const currentHourStr = hours.find((h: string) => {
       const [hourNum] = h.split(':');
       const hourValue = parseInt(hourNum);
       // Для ночного графика учитываем переход через полночь
@@ -406,7 +406,7 @@ const shiftHourWindow = (direction: number) => {
     });
     
     if (currentHourStr) {
-      const operationsSum = Object.values(data).reduce((sum, opData) => {
+      const operationsSum: number = (Object.values(data) as Record<string, number>[]).reduce((sum: number, opData: Record<string, number>) => {
         return sum + (opData[currentHourStr] || 0);
       }, 0);
       // Итого = Сумма операций - Сотрудников на смене
@@ -432,13 +432,13 @@ const shiftHourWindow = (direction: number) => {
               type="number"
               min="0"
               value={totalEmployees}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement> | any) => {
                 const value = parseInt(e.target.value) || 0;
                 setTotalEmployees(value);
                 if (user?.company_id) {
                   axios.post(`/api/company-employees/${user.company_id}`, {
                     employees_count: value
-                  }).catch(err => console.error('Error saving employees count:', err));
+                  }).catch((err: unknown) => console.error('Error saving employees count:', err));
                 }
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded text-lg font-bold text-center"
@@ -450,10 +450,10 @@ const shiftHourWindow = (direction: number) => {
           <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
             <h3 className="text-sm font-semibold mb-2">Распределение по операциям (текущий час)</h3>
             <div className="space-y-1 text-xs">
-              {companyOperations.map(op => {
+              {companyOperations.map((op: string) => {
                 const now = new Date();
                 const currentHour = now.getHours();
-                const currentHourStr = hours.find(h => {
+                const currentHourStr = hours.find((h: string) => {
                   const [hourNum] = h.split(':');
                   const hourValue = parseInt(hourNum);
                   if (hourValue < 10 && currentHour >= 21) {
@@ -525,7 +525,7 @@ const shiftHourWindow = (direction: number) => {
               ←
             </button>
             <div className="flex gap-2">
-              {visibleHours.map(hour => (
+              {visibleHours.map((hour: string) => (
                 <span
                   key={hour}
                   className={`px-3 py-1 rounded text-sm font-semibold ${
@@ -551,11 +551,11 @@ const shiftHourWindow = (direction: number) => {
           
           {/* Mobile-friendly input */}
           <div className="lg:hidden space-y-4">
-            {companyOperations.map(operation => (
+            {companyOperations.map((operation: string) => (
               <div key={operation} className="bg-white rounded-lg shadow p-4">
                 <h3 className="font-semibold mb-3 text-lg">{operation}</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  {visibleHours.map(hour => (
+                  {visibleHours.map((hour: string) => (
                     <div key={hour} className="flex flex-col">
                       <label className={`text-xs mb-1 ${centerHour === hour ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
                         {hour}
@@ -564,7 +564,7 @@ const shiftHourWindow = (direction: number) => {
                         type="number"
                         min="0"
                         value={data[operation]?.[hour] || 0}
-                        onChange={(e) => handleValueChange(operation, hour, parseInt(e.target.value) || 0)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleValueChange(operation, hour, parseInt(e.target.value) || 0)}
                         className="w-full px-2 py-2 border border-gray-300 rounded text-center text-lg"
                       />
                     </div>
@@ -582,7 +582,7 @@ const shiftHourWindow = (direction: number) => {
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 sticky left-0 bg-gray-50 z-10">
                     Операции
                   </th>
-                  {visibleHours.map(hour => (
+                  {visibleHours.map((hour: string) => (
                     <th
                       key={hour}
                       className={`px-4 py-3 text-center text-sm font-semibold ${
@@ -595,18 +595,18 @@ const shiftHourWindow = (direction: number) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {companyOperations.map(operation => (
+                {companyOperations.map((operation: string) => (
                   <tr key={operation}>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10">
                       {operation}
                     </td>
-                    {visibleHours.map(hour => (
+                    {visibleHours.map((hour: string) => (
                       <td key={hour} className="px-4 py-3">
                         <input
                           type="number"
                           min="0"
                           value={data[operation]?.[hour] || 0}
-                          onChange={(e) => handleValueChange(operation, hour, parseInt(e.target.value) || 0)}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleValueChange(operation, hour, parseInt(e.target.value) || 0)}
                           className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </td>

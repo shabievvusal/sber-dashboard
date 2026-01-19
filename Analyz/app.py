@@ -2253,20 +2253,34 @@ def health_check():
         db_path = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "database.sqlite3"))
         db_ok = os.path.exists(db_path) or os.path.exists(os.path.dirname(db_path))
         
-        # Проверяем доступность базы данных для штрихкодов (та же база, но проверяем таблицу)
+        # Проверяем доступность базы данных для штрихкодов
         barcode_db_ok = False
         barcode_db_error = None
         try:
-            import sqlite3
-            if os.path.exists(db_path):
-                conn = sqlite3.connect(db_path, timeout=2.0)
+            use_postgres = os.environ.get("BARCODE_USE_POSTGRES", "false").lower() == "true"
+            if use_postgres:
+                # PostgreSQL
+                import psycopg2
+                from db import get_db_connection, release_db_connection
+                conn = get_db_connection()
                 cur = conn.cursor()
-                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='products'")
+                cur.execute("SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='products')")
                 result = cur.fetchone()
-                conn.close()
-                barcode_db_ok = result is not None
+                barcode_db_ok = result[0] if result else False
+                cur.close()
+                release_db_connection(conn)
             else:
-                barcode_db_error = "Database file does not exist"
+                # SQLite
+                import sqlite3
+                if os.path.exists(db_path):
+                    conn = sqlite3.connect(db_path, timeout=2.0)
+                    cur = conn.cursor()
+                    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='products'")
+                    result = cur.fetchone()
+                    conn.close()
+                    barcode_db_ok = result is not None
+                else:
+                    barcode_db_error = "Database file does not exist"
         except Exception as e:
             barcode_db_error = str(e)
         
