@@ -72,17 +72,17 @@ app.use(
     // даже если Flask успел всё обработать и записать результаты.
     proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
     timeout: ANALYZ_PROXY_TIMEOUT_MS,
-    // Увеличиваем лимит размера тела запроса для проксирования
-    limit: '100mb',
     pathRewrite: (pathStr: string) => {
       const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
       return rewritten === '' ? '/' : rewritten;
     },
-    onError: (err, req, res) => {
+    onError: (err: Error, req: express.Request, res: express.Response) => {
       console.error('Proxy error:', err.message);
-      res.status(502).json({ error: 'Bad Gateway', message: err.message });
+      if (!res.headersSent) {
+        res.status(502).json({ error: 'Bad Gateway', message: err.message });
+      }
     },
-    onProxyReq: (proxyReq, req, res) => {
+    onProxyReq: (proxyReq: any, req: express.Request, res: express.Response) => {
       // Увеличиваем таймаут для больших запросов
       proxyReq.setTimeout(ANALYZ_PROXY_TIMEOUT_MS);
     }
