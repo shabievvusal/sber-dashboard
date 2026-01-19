@@ -63,32 +63,22 @@ app.use(session({
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Прокси для Analyz сервиса
-const analyzProxy = createProxyMiddleware({
-  target: ANALYZ_SERVICE_URL,
-  changeOrigin: true,
-  ws: true,
-  // Для тяжелых операций (загрузка/анализ больших файлов) нужно больше времени, иначе получаем 504,
-  // даже если Flask успел всё обработать и записать результаты.
-  proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
-  timeout: ANALYZ_PROXY_TIMEOUT_MS,
-  pathRewrite: (pathStr: string) => {
-    const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
-    return rewritten === '' ? '/' : rewritten;
-  }
-});
-
-// Оборачиваем прокси в middleware для обработки ошибок
-app.use('/integrations/analyz', (req, res, next) => {
-  analyzProxy(req, res, (err: any) => {
-    if (err) {
-      console.error('Proxy error:', err.message);
-      if (!res.headersSent) {
-        return res.status(502).json({ error: 'Bad Gateway', message: err.message });
-      }
+app.use(
+  '/integrations/analyz',
+  createProxyMiddleware({
+    target: ANALYZ_SERVICE_URL,
+    changeOrigin: true,
+    ws: true,
+    // Для тяжелых операций (загрузка/анализ больших файлов) нужно больше времени, иначе получаем 504,
+    // даже если Flask успел всё обработать и записать результаты.
+    proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
+    timeout: ANALYZ_PROXY_TIMEOUT_MS,
+    pathRewrite: (pathStr: string) => {
+      const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
+      return rewritten === '' ? '/' : rewritten;
     }
-    // Если ошибки нет, прокси уже обработал запрос, next() не нужен
-  });
-});
+  })
+);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -103,6 +93,15 @@ app.use('/api/employees-mapping', employeesMappingRoutes);
 app.use('/api/tsd', tsdRoutes);
 app.use('/api/service-note', serviceNoteRoutes);
 app.use('/api/products', productsRoutes);
+
+// Error handling middleware (должен быть после всех маршрутов)
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error:', err.message);
+  if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+    return res.status(502).json({ error: 'Bad Gateway', message: 'Service unavailable' });
+  }
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+});
 
 // Initialize database and start server
 initDatabase().then(() => {
