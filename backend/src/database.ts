@@ -12,15 +12,35 @@ const dbDir = path.dirname(dbPath);
 if (dbDir && dbDir !== dbPath) {
   try {
     fs.mkdirSync(dbDir, { recursive: true });
+    // Проверяем права на запись
+    try {
+      fs.accessSync(dbDir, fs.constants.W_OK);
+    } catch (err: any) {
+      console.error(`No write permission for database directory ${dbDir}:`, err.message);
+      process.exit(1);
+    }
   } catch (err: any) {
     // Игнорируем ошибку, если директория уже существует
     if (err.code !== 'EEXIST') {
-      console.warn(`Could not create database directory ${dbDir}:`, err.message);
+      console.error(`Could not create database directory ${dbDir}:`, err.message);
+      console.error(`DATABASE_PATH environment variable: ${process.env.DATABASE_PATH || 'not set'}`);
+      process.exit(1);
     }
   }
 }
 
-const db = new sqlite3.Database(dbPath);
+// Создаем подключение к базе данных с обработкой ошибок
+const db = new sqlite3.Database(dbPath, (err: Error | null) => {
+  if (err) {
+    console.error(`Cannot open database at ${dbPath}:`, err.message);
+    console.error(`DATABASE_PATH environment variable: ${process.env.DATABASE_PATH || 'not set'}`);
+    console.error(`Directory exists: ${fs.existsSync(dbDir)}`);
+    console.error(`Full path: ${path.resolve(dbPath)}`);
+    process.exit(1);
+  } else {
+    console.log(`Database opened successfully at ${dbPath}`);
+  }
+});
 
 // Promisify database methods with proper typing
 const dbRun = (sql: string, params?: any[]): Promise<sqlite3.RunResult> => {

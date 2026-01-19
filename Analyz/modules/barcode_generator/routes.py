@@ -23,17 +23,37 @@ def get_db_connection(timeout_seconds: Optional[float] = 5.0) -> sqlite3.Connect
 
 def ensure_schema() -> None:
     """Ensure the required database schema exists."""
-    # Создаем директорию для базы данных, если её нет
-    db_dir = os.path.dirname(DB_PATH)
-    if db_dir and db_dir != DB_PATH:  # Проверяем, что это не сам файл
-        os.makedirs(db_dir, exist_ok=True)
-    
-    # Создаем файл базы данных, если его нет
-    if not os.path.exists(DB_PATH):
-        # Создаем пустой файл
-        open(DB_PATH, 'a').close()
-    
-    conn = sqlite3.connect(DB_PATH)
+    try:
+        # Создаем директорию для базы данных, если её нет
+        db_dir = os.path.dirname(DB_PATH)
+        if db_dir and db_dir != DB_PATH:  # Проверяем, что это не сам файл
+            os.makedirs(db_dir, exist_ok=True)
+            # Проверяем права на запись
+            if not os.access(db_dir, os.W_OK):
+                raise PermissionError(f"No write permission for directory: {db_dir}")
+        
+        # SQLite создаст файл автоматически при подключении, но проверим права
+        if os.path.exists(DB_PATH):
+            if not os.access(DB_PATH, os.W_OK):
+                raise PermissionError(f"No write permission for database file: {DB_PATH}")
+        else:
+            # Проверяем, можем ли мы создать файл в директории
+            test_file = os.path.join(db_dir, '.test_write')
+            try:
+                with open(test_file, 'w') as f:
+                    f.write('test')
+                os.remove(test_file)
+            except Exception as e:
+                raise PermissionError(f"Cannot create database file in {db_dir}: {e}")
+        
+        conn = sqlite3.connect(DB_PATH)
+    except Exception as e:
+        import sys
+        print(f"ERROR: Cannot create/open database at {DB_PATH}: {e}", file=sys.stderr)
+        print(f"DB_PATH environment variable: {os.environ.get('DB_PATH', 'not set')}", file=sys.stderr)
+        print(f"Current working directory: {os.getcwd()}", file=sys.stderr)
+        print(f"Directory exists: {os.path.exists(db_dir) if 'db_dir' in locals() else 'N/A'}", file=sys.stderr)
+        raise
     cur = conn.cursor()
 
     cur.execute(
