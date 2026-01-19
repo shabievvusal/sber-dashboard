@@ -33,7 +33,11 @@ router.get('/check/:barcode', requireAuth, async (req: AuthRequest, res: express
     const { barcode } = req.params;
 
     // Проверяем, является ли это логином сотрудника из employees.csv
-    const EMPLOYEES_CSV_PATH = path.resolve(__dirname, '../../../Analyz/employees.csv');
+    // Путь к employees.csv - используем общую директорию с Analyz
+    const EMPLOYEES_CSV_PATH = process.env.EMPLOYEES_CSV_PATH || 
+      (process.env.NODE_ENV === 'production' 
+        ? '/app/analyz-data/employees.csv'
+        : path.resolve(__dirname, '../../../Analyz/employees.csv'));
     if (fs.existsSync(EMPLOYEES_CSV_PATH)) {
       try {
         // Читаем файл как Buffer для определения кодировки

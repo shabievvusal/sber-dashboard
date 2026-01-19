@@ -16,7 +16,13 @@ interface EmployeeRow {
   photo_url?: string | null;
 }
 
-const EMPLOYEES_CSV_PATH = path.resolve(__dirname, '../../../Analyz/employees.csv');
+// Путь к employees.csv - используем общую директорию с Analyz
+// В Docker: /app/analyz-data/employees.csv
+// Локально: ../../../Analyz/employees.csv
+const EMPLOYEES_CSV_PATH = process.env.EMPLOYEES_CSV_PATH || 
+  (process.env.NODE_ENV === 'production' 
+    ? '/app/analyz-data/employees.csv'
+    : path.resolve(__dirname, '../../../Analyz/employees.csv'));
 const EMPLOYEE_PHOTOS_DIR = path.resolve(__dirname, '../../uploads/employee_photos');
 
 function ensurePhotosDir() {
@@ -156,13 +162,25 @@ router.put('/', (req, res) => {
       assignment: (r.assignment || '').trim()
     }));
 
+    // Убеждаемся, что директория существует
+    const dir = path.dirname(EMPLOYEES_CSV_PATH);
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch (dirErr: any) {
+      console.error('Failed to create directory for employees.csv', dirErr);
+      // Продолжаем, возможно директория уже существует
+    }
+
     const buffer = serializeEmployeesCsv(cleaned);
     fs.writeFileSync(EMPLOYEES_CSV_PATH, buffer);
 
     return res.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to write employees.csv', err);
-    return res.status(500).json({ error: 'Не удалось сохранить employees.csv' });
+    return res.status(500).json({ 
+      error: 'Не удалось сохранить employees.csv',
+      details: err?.message || String(err)
+    });
   }
 });
 
@@ -172,6 +190,15 @@ router.post('/upload', upload.single('file'), (req, res) => {
   try {
     if (!req.file || !req.file.buffer) {
       return res.status(400).json({ error: 'Файл не передан' });
+    }
+    
+    // Убеждаемся, что директория существует
+    const dir = path.dirname(EMPLOYEES_CSV_PATH);
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch (dirErr: any) {
+      console.error('Failed to create directory for employees.csv', dirErr);
+      // Продолжаем, возможно директория уже существует
     }
     
     // Определяем кодировку загруженного файла и декодируем
@@ -184,9 +211,12 @@ router.post('/upload', upload.single('file'), (req, res) => {
     const buffer = iconv.encode(text, 'cp1251');
     fs.writeFileSync(EMPLOYEES_CSV_PATH, buffer);
     return res.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to upload employees.csv', err);
-    return res.status(500).json({ error: 'Не удалось сохранить загруженный файл employees.csv' });
+    return res.status(500).json({ 
+      error: 'Не удалось сохранить загруженный файл employees.csv',
+      details: err?.message || String(err)
+    });
   }
 });
 
