@@ -49,6 +49,14 @@ def import_excel_to_sqlite(excel_path: str) -> None:
     df["quantity"] = pd.to_numeric(df["quantity"], errors="coerce").astype('Int64')
     df = df.dropna(subset=["group_code", "barcode", "quantity"])  # must have these
 
+    # Удаляем дубликаты по barcode, оставляя последнее значение
+    # Это важно для избежания проблем с дубликатами
+    initial_count = len(df)
+    df = df.drop_duplicates(subset=["barcode"], keep="last")
+    duplicates_removed = initial_count - len(df)
+    if duplicates_removed > 0:
+        print(f"Warning: Removed {duplicates_removed} duplicate barcodes (keeping last occurrence)")
+
     # Подготовка к пакетной вставке
     records = df.to_dict(orient="records")
 
@@ -122,7 +130,15 @@ def import_excel_to_postgres(excel_path: str) -> None:
     df["quantity"] = pd.to_numeric(df["quantity"], errors="coerce").astype('Int64')
     df = df.dropna(subset=["group_code", "barcode", "quantity"])  # must have these
 
-    print(f"Processed {len(df)} rows from Excel")
+    # Удаляем дубликаты по barcode, оставляя последнее значение
+    # Это важно для PostgreSQL, чтобы избежать ошибки "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    initial_count = len(df)
+    df = df.drop_duplicates(subset=["barcode"], keep="last")
+    duplicates_removed = initial_count - len(df)
+    if duplicates_removed > 0:
+        print(f"Warning: Removed {duplicates_removed} duplicate barcodes (keeping last occurrence)")
+
+    print(f"Processed {len(df)} rows from Excel (after removing duplicates)")
 
     # Подготовка к пакетной вставке
     records = df.to_dict(orient="records")

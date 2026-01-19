@@ -334,13 +334,15 @@ def upload_barcode_data():
             if analyz_data_path not in sys.path:
                 sys.path.insert(0, analyz_data_path)
             
-            # Получаем количество записей перед импортом
+            # Получаем количество записей перед импортом (после обработки дубликатов)
             import pandas as pd
             df = pd.read_excel(tmp_path, engine="openpyxl", header=None)
             df = df.iloc[:, :4]
             df.columns = ["group_code", "product_name", "barcode", "quantity"]
             df = df.dropna(how="all")
             df = df.dropna(subset=["group_code", "barcode", "quantity"])
+            # Удаляем дубликаты для подсчета
+            df = df.drop_duplicates(subset=["barcode"], keep="last")
             record_count = len(df)
             
             # Импортируем данные
