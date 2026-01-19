@@ -83,11 +83,10 @@ app.use('/integrations/analyz', (req, res, next) => {
     if (err) {
       console.error('Proxy error:', err.message);
       if (!res.headersSent) {
-        res.status(502).json({ error: 'Bad Gateway', message: err.message });
+        return res.status(502).json({ error: 'Bad Gateway', message: err.message });
       }
-    } else {
-      next();
     }
+    // Если ошибки нет, прокси уже обработал запрос, next() не нужен
   });
 });
 
