@@ -19,6 +19,14 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8467241470:AAHgY7NHZM
 _telegram_chat_ids_str = os.environ.get("TELEGRAM_CHAT_ID", "544569923,613051042")
 TELEGRAM_CHAT_ID = [chat_id.strip() for chat_id in _telegram_chat_ids_str.split(",") if chat_id.strip()]
 
+# Логируем настройки Telegram при старте (без токена для безопасности)
+if TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_TOKEN.strip():
+    print(f"INFO: Telegram Bot настроен. Количество получателей: {len(TELEGRAM_CHAT_ID)}")
+    if not TELEGRAM_CHAT_ID:
+        print("WARNING: TELEGRAM_CHAT_ID не установлен. Отправка в Telegram будет отключена.")
+else:
+    print("WARNING: TELEGRAM_BOT_TOKEN не установлен. Отправка в Telegram будет отключена.")
+
 # Подавляем предупреждения pandas о создании атрибутов через setattr
 warnings.filterwarnings('ignore', category=UserWarning, message='.*Pandas doesn\'t allow columns to be created via a new attribute name.*')
 
@@ -3021,9 +3029,16 @@ def _send_telegram_photo(photo_path: str, caption: str = "") -> bool:
     from requests.adapters import HTTPAdapter
     from urllib3.util.retry import Retry
     
-    if not TELEGRAM_CHAT_ID:
-        app.logger.warning("TELEGRAM_CHAT_ID не установлен. Пропускаем отправку в Telegram.")
+    # Проверяем наличие токена и chat_id
+    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN.strip() == "":
+        app.logger.error("TELEGRAM_BOT_TOKEN не установлен. Пропускаем отправку в Telegram.")
         return False
+    
+    if not TELEGRAM_CHAT_ID or len(TELEGRAM_CHAT_ID) == 0:
+        app.logger.error("TELEGRAM_CHAT_ID не установлен. Пропускаем отправку в Telegram.")
+        return False
+    
+    app.logger.info(f"Попытка отправить фото в Telegram. Получателей: {len(TELEGRAM_CHAT_ID)}, файл: {photo_path}")
     
     # Проверяем размер файла один раз для всех получателей
     try:
@@ -3066,9 +3081,17 @@ def _send_telegram_photo(photo_path: str, caption: str = "") -> bool:
                     timeout = max(60, file_size / 1024 / 10)  # Минимум 60 секунд, плюс время на передачу
                     response = session.post(url, files=files, data=data, timeout=timeout)
                     response.raise_for_status()
-                    app.logger.info(f"Скриншот успешно отправлен в Telegram chat_id {chat_id} (попытка {attempt + 1})")
-                    success_count += 1
-                    break  # Успешно отправлено этому получателю, переходим к следующему
+                    result = response.json()
+                    if result.get('ok'):
+                        app.logger.info(f"Скриншот успешно отправлен в Telegram chat_id {chat_id} (попытка {attempt + 1})")
+                        success_count += 1
+                        break  # Успешно отправлено этому получателю, переходим к следующему
+                    else:
+                        error_desc = result.get('description', 'Unknown error')
+                        app.logger.error(f"Telegram API вернул ошибку для chat_id {chat_id}: {error_desc}")
+                        if attempt < max_retries - 1:
+                            time.sleep(2 ** attempt)
+                            continue
             except requests.exceptions.Timeout as e:
                 app.logger.warning(f"Таймаут при отправке фото в Telegram chat_id {chat_id} (попытка {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:
@@ -3361,16 +3384,32 @@ def _send_telegram_message(chat_id: str, text: str) -> bool:
     """Отправляет текстовое сообщение в Telegram."""
     try:
         import requests
+        
+        # Проверяем наличие токена
+        if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN.strip() == "":
+            app.logger.error("TELEGRAM_BOT_TOKEN не установлен. Не могу отправить сообщение в Telegram.")
+            return False
+        
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         data = {
             'chat_id': chat_id,
             'text': text[:4096]  # Максимум 4096 символов
         }
+        app.logger.info(f"Отправка сообщения в Telegram chat_id {chat_id}: {text[:100]}...")
         response = requests.post(url, json=data, timeout=10)
         response.raise_for_status()
-        return True
+        result = response.json()
+        if result.get('ok'):
+            app.logger.info(f"Сообщение успешно отправлено в Telegram chat_id {chat_id}")
+            return True
+        else:
+            error_desc = result.get('description', 'Unknown error')
+            app.logger.error(f"Telegram API вернул ошибку для chat_id {chat_id}: {error_desc}")
+            return False
     except Exception as e:
-        app.logger.error(f"Ошибка при отправке сообщения в Telegram: {e}")
+        app.logger.error(f"Ошибка при отправке сообщения в Telegram chat_id {chat_id}: {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
         return False
 
 
