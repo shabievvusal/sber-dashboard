@@ -753,6 +753,10 @@ def _try_read_employees_csv(path: str) -> pd.DataFrame:
 
 def _try_read_employees(path: str) -> pd.DataFrame:
     """Читает файл сотрудников как CSV или Excel по расширению."""
+    # Проверяем, что путь не является директорией
+    if os.path.exists(path) and os.path.isdir(path):
+        raise ValueError(f"Путь к файлу сотрудников является директорией, а не файлом: {path}")
+    
     ext = os.path.splitext(path)[1].lower()
     if ext in {".xlsx", ".xls"}:
         # Excel: читаем как есть, все в строки
