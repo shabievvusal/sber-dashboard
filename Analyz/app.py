@@ -2220,6 +2220,11 @@ def clear_accumulator():
 def list_days():
     """Возвращает список дат (YYYY-MM-DD), для которых есть данные."""
     try:
+        # Убеждаемся, что директория существует
+        if not os.path.exists(DATA_DIR):
+            os.makedirs(DATA_DIR, exist_ok=True)
+            return {"days": []}  # Возвращаем пустой список, если директория только что создана
+        
         days: List[str] = []
         # New structure: directories with date names and a CSV inside
         for entry in os.listdir(DATA_DIR):
@@ -2233,9 +2238,10 @@ def list_days():
                 if candidate not in days:
                     days.append(candidate)
         days.sort()
-        return {"days": days}
+        return jsonify({"days": days})
     except Exception as e:
-        return {"days": [], "error": str(e)}, 500
+        app.logger.error(f"Error listing days: {e}", exc_info=True)
+        return jsonify({"days": [], "error": str(e)}), 500
 
 
 @app.route("/analyze_day/<date_str>", methods=["GET"]) 
