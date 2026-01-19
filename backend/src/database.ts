@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import path from 'path';
 import fs from 'fs';
 
-// В Docker используем /app/backend-data/database.db, локально - ../database.db
+// В Docker используем /app/data/database.db, локально - ../database.db
 const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../database.db');
 
 // Создаем директорию для базы данных, если её нет
