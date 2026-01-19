@@ -63,50 +63,51 @@ app.use(session({
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Middleware для обработки ошибок прокси
+const proxyErrorHandler = (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(`[Proxy Error] Failed to proxy ${req.url} to ${ANALYZ_SERVICE_URL}:`, err.message);
+  if (err.code === 'ECONNREFUSED') {
+    return res.status(503).json({ 
+      error: 'Service Unavailable', 
+      message: `Analyz service is not available at ${ANALYZ_SERVICE_URL}. Please check if the service is running.` 
+    });
+  } else if (err.code === 'ETIMEDOUT') {
+    return res.status(504).json({ 
+      error: 'Gateway Timeout', 
+      message: 'Request to Analyz service timed out' 
+    });
+  } else {
+    return res.status(502).json({ 
+      error: 'Bad Gateway', 
+      message: `Failed to proxy request: ${err.message}` 
+    });
+  }
+};
+
 // Прокси для Analyz сервиса
-app.use(
-  '/integrations/analyz',
-  createProxyMiddleware({
-    target: ANALYZ_SERVICE_URL,
-    changeOrigin: true,
-    ws: true,
-    // Для тяжелых операций (загрузка/анализ больших файлов) нужно больше времени, иначе получаем 504,
-    // даже если Flask успел всё обработать и записать результаты.
-    proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
-    timeout: ANALYZ_PROXY_TIMEOUT_MS,
-    pathRewrite: (pathStr: string) => {
-      const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
-      const result = rewritten === '' ? '/' : rewritten;
-      console.log(`[Proxy] ${pathStr} -> ${result} (target: ${ANALYZ_SERVICE_URL})`);
-      return result;
-    },
-    onError: (err: any, req: express.Request, res: express.Response) => {
-      console.error(`[Proxy Error] Failed to proxy ${req.url} to ${ANALYZ_SERVICE_URL}:`, err.message);
-      if (err.code === 'ECONNREFUSED') {
-        res.status(503).json({ 
-          error: 'Service Unavailable', 
-          message: `Analyz service is not available at ${ANALYZ_SERVICE_URL}. Please check if the service is running.` 
-        });
-      } else if (err.code === 'ETIMEDOUT') {
-        res.status(504).json({ 
-          error: 'Gateway Timeout', 
-          message: 'Request to Analyz service timed out' 
-        });
-      } else {
-        res.status(502).json({ 
-          error: 'Bad Gateway', 
-          message: `Failed to proxy request: ${err.message}` 
-        });
-      }
-    },
-    onProxyReq: (proxyReq, req, res) => {
-      console.log(`[Proxy Request] ${req.method} ${req.url} -> ${ANALYZ_SERVICE_URL}${proxyReq.path}`);
-    },
-    onProxyRes: (proxyRes, req, res) => {
-      console.log(`[Proxy Response] ${req.url} -> ${proxyRes.statusCode}`);
-    }
-  })
-);
+const proxyMiddleware = createProxyMiddleware({
+  target: ANALYZ_SERVICE_URL,
+  changeOrigin: true,
+  ws: true,
+  // Для тяжелых операций (загрузка/анализ больших файлов) нужно больше времени, иначе получаем 504,
+  // даже если Flask успел всё обработать и записать результаты.
+  proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
+  timeout: ANALYZ_PROXY_TIMEOUT_MS,
+  pathRewrite: (pathStr: string) => {
+    const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
+    const result = rewritten === '' ? '/' : rewritten;
+    console.log(`[Proxy] ${pathStr} -> ${result} (target: ${ANALYZ_SERVICE_URL})`);
+    return result;
+  },
+  onProxyReq: (proxyReq: any, req: express.Request, res: express.Response) => {
+    console.log(`[Proxy Request] ${req.method} ${req.url} -> ${ANALYZ_SERVICE_URL}${proxyReq.path}`);
+  },
+  onProxyRes: (proxyRes: any, req: express.Request, res: express.Response) => {
+    console.log(`[Proxy Response] ${req.url} -> ${proxyRes.statusCode}`);
+  }
+});
+
+app.use('/integrations/analyz', proxyMiddleware, proxyErrorHandler);
 
 // Health check (до других маршрутов для быстрой проверки)
 app.use('/health', healthRoutes);
