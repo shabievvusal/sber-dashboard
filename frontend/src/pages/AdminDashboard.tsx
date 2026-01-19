@@ -9,7 +9,6 @@ import LogoutButton from '../components/LogoutButton';
 import EmployeesInfoBlock from '../components/EmployeesInfoBlock';
 import EmployeesMappingEditor from '../components/EmployeesMappingEditor';
 import UploadReportModal from '../components/UploadReportModal';
-import BarcodeIframe from '../components/BarcodeIframe';
 import TSDControlEmbedded from '../components/TSDControlEmbedded';
 import ServiceNoteEditor from '../components/ServiceNoteEditor';
 import ShowStats from './ShowStats';
@@ -264,18 +263,6 @@ export default function AdminDashboard() {
         <div className="w-full lg:w-80 bg-white border-r border-gray-200 p-4">
           <TaskList companyId={null} canCreate={true} />
           <EmployeesInfoBlock />
-          <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold mb-1">Генератор штрихкодов</h3>
-            <p className="text-xs text-gray-600 mb-3">
-              Введите параметры и получите штрихкоды прямо в этом блоке.
-            </p>
-            <div className="rounded border border-gray-200 overflow-hidden">
-              <BarcodeIframe
-                compact={false}
-                style={{ height: '260px' }}
-              />
-            </div>
-          </div>
         </div>
         <div className="flex-1 p-4 lg:p-6">
           {showUserManagement ? (

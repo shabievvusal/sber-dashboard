@@ -7,7 +7,6 @@ import DraggableBlock from '../components/DraggableBlock';
 import LogoutButton from '../components/LogoutButton';
 import EmployeesInfoBlock from '../components/EmployeesInfoBlock';
 import UploadReportModal from '../components/UploadReportModal';
-import BarcodeIframe from '../components/BarcodeIframe';
 import TSDControlEmbedded from '../components/TSDControlEmbedded';
 import ServiceNoteEditor from '../components/ServiceNoteEditor';
 import ShowStats from './ShowStats';
@@ -28,8 +27,6 @@ interface DaySummary {
 export default function OperatorDashboard() {
   const { user, logout } = useAuth();
   const [currentHour, setCurrentHour] = useState('');
-  const [barcodeIframeHeight, setBarcodeIframeHeight] = useState('100px');
-  const barcodeIframeRef = useRef<HTMLIFrameElement>(null);
   const [blocks, setBlocks] = useState<BlockConfig[]>([
     { id: 'summary', visible: true },
     { id: 'analyz', visible: true },
@@ -137,23 +134,6 @@ export default function OperatorDashboard() {
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'barcode-resize') {
-        const height = event.data.height;
-        if (height === 'expand') {
-          setBarcodeIframeHeight('520px');
-        } else if (height === 'collapse') {
-          setBarcodeIframeHeight('100px');
-        } else if (typeof height === 'string' && height.endsWith('px')) {
-          setBarcodeIframeHeight(height);
-        }
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
 
   const updateCurrentHour = () => {
     const now = new Date();
@@ -294,24 +274,6 @@ export default function OperatorDashboard() {
         <div className="w-full lg:w-80 bg-white border-r border-gray-200 p-4">
           <TaskList companyId={null} canCreate={true} />
           <EmployeesInfoBlock />
-          <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold mb-1">Генератор штрихкодов</h3>
-            <p className="text-xs text-gray-600 mb-3">
-              Введите параметры и получите штрихкоды прямо в этом блоке.
-            </p>
-            <div className="rounded border border-gray-200 overflow-hidden" style={{ overflow: 'hidden' }}>
-              <BarcodeIframe
-                ref={barcodeIframeRef}
-                compact={true}
-                style={{ 
-                  height: barcodeIframeHeight, 
-                  transition: 'height 0.3s ease',
-                  overflow: 'hidden',
-                  display: 'block'
-                }}
-              />
-            </div>
-          </div>
         </div>
         <div className="flex-1 p-4 lg:p-6">
           {/* Mobile version */}

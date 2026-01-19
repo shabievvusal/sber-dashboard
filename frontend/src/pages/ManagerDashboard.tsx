@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import TaskList from '../components/TaskList';
 import LogoutButton from '../components/LogoutButton';
 import { getCurrentHours } from '../constants';
-import BarcodeIframe from '../components/BarcodeIframe';
 import TSDCompanyStats from '../components/TSDCompanyStats';
 import ShowStats from './ShowStats';
 
@@ -36,8 +35,6 @@ export default function ManagerDashboard() {
   const [daySummaryCache, setDaySummaryCache] = useState<Record<string, DaySummary>>({});
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
-  const [barcodeIframeHeight, setBarcodeIframeHeight] = useState('100px');
-  const barcodeIframeRef = useRef<HTMLIFrameElement>(null);
   const lastDaysFetchAtRef = useRef<number>(0);
 
   useEffect(() => {
@@ -58,25 +55,6 @@ export default function ManagerDashboard() {
     };
   }, []); // не перезапускаем при переключении вкладок, чтобы не сбивать выбранный день
 
-  useEffect(() => {
-    // Обработчик сообщений от iframe генератора штрихкодов
-    const handleMessage = (event: MessageEvent) => {
-      // Проверяем тип сообщения и данные
-      if (event.data && event.data.type === 'barcode-resize') {
-        const height = event.data.height;
-        if (height === 'expand') {
-          setBarcodeIframeHeight('520px');
-        } else if (height === 'collapse') {
-          setBarcodeIframeHeight('100px');
-        } else if (typeof height === 'string' && height.endsWith('px')) {
-          setBarcodeIframeHeight(height);
-        }
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
 
   useEffect(() => {
     // Обновление информации о компании только если не просматриваем отчеты
@@ -483,25 +461,6 @@ const shiftHourWindow = (direction: number) => {
             <TSDCompanyStats companyName={companyName} />
           )}
 
-          {/* Barcode generator embedded block */}
-          <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold mb-1">Генератор штрихкодов</h3>
-            <p className="text-xs text-gray-600 mb-3">
-              Введите параметры и получите штрихкоды прямо в этом блоке.
-            </p>
-            <div className="rounded border border-gray-200 overflow-hidden" style={{ overflow: 'hidden' }}>
-              <BarcodeIframe
-                ref={barcodeIframeRef}
-                compact={true}
-                style={{ 
-                  height: barcodeIframeHeight, 
-                  transition: 'height 0.3s ease',
-                  overflow: 'hidden',
-                  display: 'block'
-                }}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Main content - Data input */}
