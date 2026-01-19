@@ -201,7 +201,7 @@ export default function SummaryTable({ currentHour, onHourChange }: SummaryTable
     <div>
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 gap-4">
         <h2 className="text-xl lg:text-2xl font-bold">
-          Сводная таблица (данные за текущий час: {formatHour(currentHour)})
+          Сводная таблица
         </h2>
         {(user?.role === 'admin' || user?.role === 'operator') && companies.length > 0 && (
           <div className="flex flex-wrap gap-2">

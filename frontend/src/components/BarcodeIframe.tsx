@@ -13,22 +13,9 @@ const BarcodeIframe = forwardRef<HTMLIFrameElement, BarcodeIframeProps>(({
   style,
   title = "Генерация штрихкодов"
 }, ref) => {
-  // Определяем URL для iframe
-  // Сначала пробуем через прокси, если не работает - используем прямой доступ
+  // Всегда используем прокси через backend для единообразия и безопасности
   const iframeSrc = useMemo(() => {
-    // Если мы на сервере (не localhost), используем прямой доступ к Analyz
-    const hostname = window.location.hostname;
-    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-    
-    if (isLocalhost) {
-      // Локально используем прокси
-      return `/integrations/analyz/barcode${compact ? '?compact=1' : ''}`;
-    } else {
-      // На сервере используем прямой доступ к Analyz
-      const protocol = window.location.protocol;
-      // Для Analyz используем порт 5050
-      return `${protocol}//${hostname}:5050/barcode${compact ? '?compact=1' : ''}`;
-    }
+    return `/integrations/analyz/barcode${compact ? '?compact=1' : ''}`;
   }, [compact]);
 
   const defaultStyle: React.CSSProperties = {
