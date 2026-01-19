@@ -149,15 +149,6 @@ export default function SummaryTable({ currentHour, onHourChange }: SummaryTable
     return totalOperations - totalEmployees;
   };
 
-  const formatHour = (hourStr: string) => {
-    try {
-      const date = new Date(hourStr);
-      return format(date, 'HH:mm');
-    } catch {
-      return hourStr.split(' ')[1]?.substring(0, 5) || hourStr;
-    }
-  };
-
   const [currentHours, setCurrentHours] = useState<string[]>(getCurrentHours());
 
   useEffect(() => {
