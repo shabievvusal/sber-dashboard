@@ -2,8 +2,24 @@ import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
 import bcrypt from 'bcrypt';
 import path from 'path';
+import fs from 'fs';
 
-const dbPath = path.join(__dirname, '../database.db');
+// В Docker используем /app/backend-data/database.db, локально - ../database.db
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../database.db');
+
+// Создаем директорию для базы данных, если её нет
+const dbDir = path.dirname(dbPath);
+if (dbDir && dbDir !== dbPath) {
+  try {
+    fs.mkdirSync(dbDir, { recursive: true });
+  } catch (err: any) {
+    // Игнорируем ошибку, если директория уже существует
+    if (err.code !== 'EEXIST') {
+      console.warn(`Could not create database directory ${dbDir}:`, err.message);
+    }
+  }
+}
+
 const db = new sqlite3.Database(dbPath);
 
 // Promisify database methods with proper typing

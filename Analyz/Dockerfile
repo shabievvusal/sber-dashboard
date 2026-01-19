@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Создаем необходимые директории
-RUN mkdir -p data_days logs static templates modules/barcode_generator
+RUN mkdir -p data_days logs static templates modules/barcode_generator data
 
 # Открываем порт
 EXPOSE 5050

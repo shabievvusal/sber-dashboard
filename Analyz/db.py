@@ -31,7 +31,14 @@ def ensure_schema() -> None:
 	does not already exist.
 	"""
 	# Ensure the directory for the DB exists (in case of custom DB_PATH)
-	os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+	db_dir = os.path.dirname(DB_PATH)
+	if db_dir and db_dir != DB_PATH:  # Проверяем, что это не сам файл
+		os.makedirs(db_dir, exist_ok=True)
+	
+	# Создаем файл базы данных, если его нет
+	if not os.path.exists(DB_PATH):
+		# Создаем пустой файл
+		open(DB_PATH, 'a').close()
 
 	conn = sqlite3.connect(DB_PATH)
 	cur = conn.cursor()

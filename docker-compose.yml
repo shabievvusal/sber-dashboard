@@ -9,11 +9,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=5000
+      - DATABASE_PATH=/app/backend-data/database.db
       - ANALYZ_SERVICE_URL=http://analyz:5050
       - FRONTEND_URL=http://localhost:${FRONTEND_PORT:-3000},http://frontend:80
       - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
     volumes:
-      - ./backend/database.db:/app/database.db
+      - ./backend:/app/backend-data
       - ./backend/uploads:/app/uploads
       - ./backend/logs:/app/logs
     networks:
@@ -48,6 +49,7 @@ services:
       - PYTHONUNBUFFERED=1
       - ANALYZ_PORT=5050
       - ANALYZ_HOST=0.0.0.0
+      - DB_PATH=/app/analyz-data/database.sqlite3
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-dev-secret-key}
@@ -56,9 +58,8 @@ services:
       - MAX_COLS=${MAX_COLS:-75}
     volumes:
       - ./Analyz/data_days:/app/data_days
-      - ./Analyz/database.sqlite3:/app/database.sqlite3
+      - ./Analyz:/app/analyz-data
       - ./Analyz/logs:/app/logs
-      - ./Analyz/employees.csv:/app/employees.csv
     networks:
       - ops-network
     restart: unless-stopped

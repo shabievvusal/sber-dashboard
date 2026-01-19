@@ -9,10 +9,12 @@ from typing import Optional
 barcode_bp = Blueprint('barcode', __name__, url_prefix='/barcode')
 
 # Absolute path to the SQLite database file used by the app
-DB_PATH = os.environ.get(
-    "DB_PATH",
-    os.path.join(os.path.dirname(__file__), "..", "..", "database.sqlite3"),
-)
+# В Docker используем /app/data/database.sqlite3, локально - относительный путь
+_default_db_path = os.path.join(os.path.dirname(__file__), "..", "..", "database.sqlite3")
+DB_PATH = os.environ.get("DB_PATH", _default_db_path)
+# Если путь относительный, делаем его абсолютным
+if not os.path.isabs(DB_PATH):
+    DB_PATH = os.path.abspath(DB_PATH)
 
 def get_db_connection(timeout_seconds: Optional[float] = 5.0) -> sqlite3.Connection:
     """Return a new SQLite connection to the app database."""
@@ -21,7 +23,15 @@ def get_db_connection(timeout_seconds: Optional[float] = 5.0) -> sqlite3.Connect
 
 def ensure_schema() -> None:
     """Ensure the required database schema exists."""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    # Создаем директорию для базы данных, если её нет
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir and db_dir != DB_PATH:  # Проверяем, что это не сам файл
+        os.makedirs(db_dir, exist_ok=True)
+    
+    # Создаем файл базы данных, если его нет
+    if not os.path.exists(DB_PATH):
+        # Создаем пустой файл
+        open(DB_PATH, 'a').close()
     
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()

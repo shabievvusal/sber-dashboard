@@ -31,7 +31,7 @@ RUN npm ci --only=production
 COPY --from=builder /app/dist ./dist
 
 # Создаем директории для данных
-RUN mkdir -p uploads/employee_photos logs
+RUN mkdir -p uploads/employee_photos logs data
 
 # Открываем порт
 EXPOSE 5000
