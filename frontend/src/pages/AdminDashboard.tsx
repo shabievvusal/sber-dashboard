@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import SummaryTable from '../components/SummaryTable';
@@ -30,7 +29,6 @@ interface DaySummary {
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [currentHour, setCurrentHour] = useState('');
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [blocks, setBlocks] = useState<BlockConfig[]>([

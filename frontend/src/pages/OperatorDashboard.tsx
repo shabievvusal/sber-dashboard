@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import SummaryTable from '../components/SummaryTable';
@@ -28,7 +27,6 @@ interface DaySummary {
 
 export default function OperatorDashboard() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [currentHour, setCurrentHour] = useState('');
   const [barcodeIframeHeight, setBarcodeIframeHeight] = useState('100px');
   const barcodeIframeRef = useRef<HTMLIFrameElement>(null);

@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Development configuration with hot reload
 services:
   backend:

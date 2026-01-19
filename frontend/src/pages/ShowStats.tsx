@@ -13,7 +13,6 @@ import {
   Users,
   Camera,
   BarChart3,
-  Download,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
