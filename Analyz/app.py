@@ -2562,8 +2562,16 @@ def employee_stats(date_str: str):
         employees.sort(key=lambda x: (x.get("tasks", 0), x.get("speed", 0.0)), reverse=True)
 
         return {"date": date_str, "employees": employees}
+    except ValueError as ve:
+        error_msg = str(ve)
+        app.logger.error(f"ValueError in employee_stats for {date_str}: {error_msg}")
+        if error_msg == "no_data":
+            return {"error": "no_data", "date": date_str, "employees": []}, 404
+        return {"error": error_msg, "date": date_str, "employees": []}, 500
     except Exception as e:
-        return {"error": str(e)}, 500
+        error_msg = str(e)
+        app.logger.error(f"Exception in employee_stats for {date_str}: {error_msg}", exc_info=True)
+        return {"error": error_msg, "date": date_str, "employees": []}, 500
 
 @app.route("/employee_stats_today", methods=["GET"])
 def employee_stats_today():
