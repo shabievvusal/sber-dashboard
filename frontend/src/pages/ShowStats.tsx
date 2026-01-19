@@ -239,7 +239,13 @@ export default function ShowStats({ embedded = false }: ShowStatsProps = {} as S
     try {
       const res = await axios.get<EmployeeStatsResponse>('/integrations/analyz/employee_stats_today');
       if ((res.data as any)?.error) {
-        setError((res.data as any).error || 'Ошибка загрузки');
+        const errorMsg = (res.data as any).error;
+        // Если нет данных за сегодня, это не критическая ошибка
+        if (errorMsg === 'no_data' || errorMsg?.includes('no_data')) {
+          setError('Нет данных за сегодня. Загрузите отчет за сегодняшний день.');
+        } else {
+          setError(errorMsg || 'Ошибка загрузки');
+        }
         setEmployees([]);
         setDate('');
       } else {
@@ -248,7 +254,18 @@ export default function ShowStats({ embedded = false }: ShowStatsProps = {} as S
       }
       void loadPhotos();
     } catch (e: any) {
-      setError(e?.response?.data?.error || e?.message || 'Ошибка загрузки');
+      console.error('Error loading employee stats:', e);
+      const errorMsg = e?.response?.data?.error || e?.response?.data?.message || e?.message || 'Ошибка загрузки';
+      
+      // Более детальная обработка ошибок
+      if (e?.response?.status === 404) {
+        setError('Нет данных за сегодня. Загрузите отчет за сегодняшний день.');
+      } else if (e?.response?.status === 503 || e?.response?.status === 502) {
+        setError('Сервис Analyz временно недоступен. Попробуйте позже.');
+      } else {
+        setError(errorMsg);
+      }
+      
       setEmployees([]);
       setDate('');
     } finally {

@@ -14,7 +14,8 @@ router.get('/', (req, res) => {
 
 // Health check с проверкой зависимостей
 router.get('/detailed', async (req, res) => {
-  const ANALYZ_SERVICE_URL = process.env.ANALYZ_SERVICE_URL || 'http://localhost:5050';
+  // Проверяем Analyz через внутренний адрес Docker сети
+  const ANALYZ_SERVICE_URL = 'http://analyz:5050';
   const health: {
     status: string;
     service: string;

@@ -6,6 +6,7 @@ import threading
 import time
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask_cors import CORS
 import pandas as pd
 import json
 from werkzeug.utils import secure_filename
@@ -27,6 +28,13 @@ warnings.filterwarnings('ignore', category=UserWarning, message='.*Pandas doesn\
 # -------------------------------
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
+
+# CORS для прямого доступа из frontend (через nginx)
+CORS(app, 
+     origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 # Ограничение размера загружаемого файла (по умолчанию 30 МБ для серверов с ограниченной памятью)
 try:
     _max_mb = int(os.environ.get("MAX_UPLOAD_MB", "30"))

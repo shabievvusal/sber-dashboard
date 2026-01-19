@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import path from 'path';
-import { createProxyMiddleware } from 'http-proxy-middleware';
+// Прокси middleware больше не нужен - frontend обращается напрямую к Analyz через nginx
 import { initDatabase } from './database';
 import authRoutes from './routes/auth';
 import usersRoutes from './routes/users';
@@ -20,11 +20,7 @@ import healthRoutes from './routes/health';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const ANALYZ_SERVICE_URL = process.env.ANALYZ_SERVICE_URL || 'http://localhost:5050';
-const ANALYZ_PROXY_TIMEOUT_MS = Number.parseInt(
-  process.env.ANALYZ_PROXY_TIMEOUT_MS || '600000',
-  10
-); // 10 минут по умолчанию
+// ANALYZ_SERVICE_URL больше не нужен - frontend обращается напрямую через nginx
 
 // Middleware
 // CORS: разрешаем запросы с localhost и с внешнего IP
@@ -63,59 +59,8 @@ app.use(session({
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Middleware для обработки ошибок прокси
-const proxyErrorHandler = (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(`[Proxy Error] Failed to proxy ${req.url} to ${ANALYZ_SERVICE_URL}:`, err.message);
-  if (err.code === 'ECONNREFUSED') {
-    return res.status(503).json({ 
-      error: 'Service Unavailable', 
-      message: `Analyz service is not available at ${ANALYZ_SERVICE_URL}. Please check if the service is running.` 
-    });
-  } else if (err.code === 'ETIMEDOUT') {
-    return res.status(504).json({ 
-      error: 'Gateway Timeout', 
-      message: 'Request to Analyz service timed out' 
-    });
-  } else {
-    return res.status(502).json({ 
-      error: 'Bad Gateway', 
-      message: `Failed to proxy request: ${err.message}` 
-    });
-  }
-};
-
-// Middleware для логирования запросов к прокси
-const proxyLogger = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.log(`[Proxy Request] ${req.method} ${req.url} -> ${ANALYZ_SERVICE_URL}`);
-  
-  // Логируем ответ после завершения
-  const originalSend = res.send;
-  res.send = function(body: any) {
-    console.log(`[Proxy Response] ${req.url} -> ${res.statusCode}`);
-    return originalSend.call(this, body);
-  };
-  
-  next();
-};
-
-// Прокси для Analyz сервиса
-const proxyMiddleware = createProxyMiddleware({
-  target: ANALYZ_SERVICE_URL,
-  changeOrigin: true,
-  ws: true,
-  // Для тяжелых операций (загрузка/анализ больших файлов) нужно больше времени, иначе получаем 504,
-  // даже если Flask успел всё обработать и записать результаты.
-  proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
-  timeout: ANALYZ_PROXY_TIMEOUT_MS,
-  pathRewrite: (pathStr: string) => {
-    const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
-    const result = rewritten === '' ? '/' : rewritten;
-    console.log(`[Proxy] ${pathStr} -> ${result} (target: ${ANALYZ_SERVICE_URL})`);
-    return result;
-  }
-});
-
-app.use('/integrations/analyz', proxyLogger, proxyMiddleware, proxyErrorHandler);
+// Прокси для Analyz сервиса УДАЛЕН - теперь frontend обращается напрямую через nginx
+// Это упрощает архитектуру и убирает двойное проксирование
 
 // Health check (до других маршрутов для быстрой проверки)
 app.use('/health', healthRoutes);
