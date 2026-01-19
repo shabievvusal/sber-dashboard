@@ -2236,6 +2236,36 @@ def clear_accumulator():
     return redirect(url_for("index"))
 
 
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Health check endpoint для мониторинга состояния сервиса."""
+    try:
+        # Проверяем доступность базы данных
+        db_path = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "database.sqlite3"))
+        db_ok = os.path.exists(db_path) or os.path.exists(os.path.dirname(db_path))
+        
+        # Проверяем доступность директории данных
+        data_dir_ok = os.path.exists(DATA_DIR) or os.path.isdir(DATA_DIR)
+        
+        status = "healthy" if (db_ok and data_dir_ok) else "degraded"
+        return jsonify({
+            "status": status,
+            "service": "analyz",
+            "timestamp": datetime.now().isoformat(),
+            "checks": {
+                "database": "ok" if db_ok else "warning",
+                "data_directory": "ok" if data_dir_ok else "warning"
+            }
+        }), 200 if status == "healthy" else 503
+    except Exception as e:
+        app.logger.error(f"Health check failed: {e}", exc_info=True)
+        return jsonify({
+            "status": "unhealthy",
+            "service": "analyz",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 503
+
 @app.route("/days", methods=["GET"]) 
 def list_days():
     """Возвращает список дат (YYYY-MM-DD), для которых есть данные."""

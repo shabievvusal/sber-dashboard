@@ -47,6 +47,7 @@ export default function AdminDashboard() {
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [analyzError, setAnalyzError] = useState<string | null>(null);
 
   useEffect(() => {
     updateCurrentHour();
@@ -113,9 +114,17 @@ export default function AdminDashboard() {
       const daysRes = await axios.get('/integrations/analyz/days');
       const days = daysRes.data?.days || [];
       setAvailableDays(days);
+      setAnalyzError(null); // Очищаем ошибку при успешном запросе
       return days;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading available days:', error);
+      if (error.response?.status === 503 || error.response?.status === 502) {
+        const errorMsg = error.response?.data?.message || 'Сервис Analyz недоступен. Проверьте, запущен ли сервис.';
+        setAnalyzError(errorMsg);
+        console.error('Analyz service is unavailable. Please check if the service is running.');
+      } else {
+        setAnalyzError(null);
+      }
       return [];
     }
   };
@@ -138,8 +147,11 @@ export default function AdminDashboard() {
       } else {
         setLastDaySummary(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading last day summary:', error);
+      if (error.response?.status === 503 || error.response?.status === 502) {
+        console.error('Analyz service is unavailable. Please check if the service is running.');
+      }
       setLastDaySummary(null);
     } finally {
       setLoadingSummary(false);
@@ -156,8 +168,11 @@ export default function AdminDashboard() {
           date: date
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading day summary:', error);
+      if (error.response?.status === 503 || error.response?.status === 502) {
+        console.error('Analyz service is unavailable. Please check if the service is running.');
+      }
     } finally {
       setLoadingSummary(false);
     }
@@ -199,6 +214,22 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <LogoutButton />
+      {analyzError && (
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mx-4 mt-4 rounded">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold">Ошибка подключения к Analyz</p>
+              <p className="text-sm">{analyzError}</p>
+            </div>
+            <button
+              onClick={() => setAnalyzError(null)}
+              className="text-red-700 hover:text-red-900"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold">Панель администратора</h1>
         <div className="flex gap-4 items-center">

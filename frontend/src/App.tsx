@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
@@ -14,9 +15,21 @@ import DataAnalytics from './pages/DataAnalytics';
 import TSDControl from './pages/TSDControl';
 import ShowStats from './pages/ShowStats';
 import FastStat from './pages/FastStat';
+import { analyzHealthMonitor } from './services/analyzHealth';
+import AnalyzHealthIndicator from './components/AnalyzHealthIndicator';
+import './utils/axiosConfig'; // Инициализация axios interceptors
 
 function AppRoutes() {
   const { user, loading } = useAuth();
+
+  // Запускаем мониторинг состояния Analyz при монтировании
+  useEffect(() => {
+    analyzHealthMonitor.startMonitoring(30000); // Проверка каждые 30 секунд
+    
+    return () => {
+      analyzHealthMonitor.stopMonitoring();
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -96,6 +109,7 @@ function App() {
         <AuthProvider>
           <BrowserRouter>
             <AppRoutes />
+            <AnalyzHealthIndicator />
           </BrowserRouter>
         </AuthProvider>
       </DndProvider>

@@ -152,8 +152,9 @@ export default function ManagerDashboard() {
       }
       
       return days;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading available days:', error);
+      // Axios interceptor уже обработал retry, здесь просто логируем
       return [];
     }
   };

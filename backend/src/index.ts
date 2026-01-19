@@ -16,6 +16,7 @@ import employeesMappingRoutes from './routes/employeesMapping';
 import tsdRoutes from './routes/tsd';
 import serviceNoteRoutes from './routes/serviceNote';
 import productsRoutes from './routes/products';
+import healthRoutes from './routes/health';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -78,9 +79,37 @@ app.use(
       const result = rewritten === '' ? '/' : rewritten;
       console.log(`[Proxy] ${pathStr} -> ${result} (target: ${ANALYZ_SERVICE_URL})`);
       return result;
+    },
+    onError: (err: any, req: express.Request, res: express.Response) => {
+      console.error(`[Proxy Error] Failed to proxy ${req.url} to ${ANALYZ_SERVICE_URL}:`, err.message);
+      if (err.code === 'ECONNREFUSED') {
+        res.status(503).json({ 
+          error: 'Service Unavailable', 
+          message: `Analyz service is not available at ${ANALYZ_SERVICE_URL}. Please check if the service is running.` 
+        });
+      } else if (err.code === 'ETIMEDOUT') {
+        res.status(504).json({ 
+          error: 'Gateway Timeout', 
+          message: 'Request to Analyz service timed out' 
+        });
+      } else {
+        res.status(502).json({ 
+          error: 'Bad Gateway', 
+          message: `Failed to proxy request: ${err.message}` 
+        });
+      }
+    },
+    onProxyReq: (proxyReq, req, res) => {
+      console.log(`[Proxy Request] ${req.method} ${req.url} -> ${ANALYZ_SERVICE_URL}${proxyReq.path}`);
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      console.log(`[Proxy Response] ${req.url} -> ${proxyRes.statusCode}`);
     }
   })
 );
+
+// Health check (до других маршрутов для быстрой проверки)
+app.use('/health', healthRoutes);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -105,13 +134,39 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
 
+// Graceful shutdown
+let server: any = null;
+
+const gracefulShutdown = (signal: string) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  
+  if (server) {
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+    
+    // Принудительное завершение через 10 секунд
+    setTimeout(() => {
+      console.error('Forced shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  } else {
+    process.exit(0);
+  }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // Initialize database and start server
 initDatabase().then(() => {
   const HOST = process.env.HOST || '0.0.0.0'; // Слушать на всех интерфейсах
   const portNumber = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;
-  app.listen(portNumber, HOST, () => {
+  server = app.listen(portNumber, HOST, () => {
     console.log(`Server running on http://${HOST}:${portNumber}`);
     console.log(`Server also accessible at http://localhost:${portNumber}`);
+    console.log(`Health check available at http://${HOST}:${portNumber}/health`);
   });
 }).catch(err => {
   console.error('Failed to initialize database:', err);
