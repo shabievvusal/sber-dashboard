@@ -2427,11 +2427,15 @@ def day_summary(date_str: str):
         )
         return result
     except ValueError as ve:
-        if str(ve) == "no_data":
+        error_msg = str(ve)
+        app.logger.error(f"ValueError in day_summary for {date_str}: {error_msg}")
+        if error_msg == "no_data":
             return {"error": "no_data"}, 404
-        return {"error": str(ve)}, 500
+        return {"error": error_msg}, 500
     except Exception as e:
-        return {"error": str(e)}, 500
+        error_msg = str(e)
+        app.logger.error(f"Exception in day_summary for {date_str}: {error_msg}", exc_info=True)
+        return {"error": error_msg}, 500
 
 @app.route("/employee_stats/<date_str>", methods=["GET"])
 def employee_stats(date_str: str):
