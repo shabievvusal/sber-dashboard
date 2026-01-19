@@ -96,7 +96,21 @@ def index():
     # compact режим для встраивания (оператор/менеджер)
     compact_param = request.args.get("compact", "").lower()
     compact = compact_param in ("1", "true", "yes")
-    return render_template("barcode/index.html", compact=compact)
+    
+    # Определяем базовый путь для API запросов
+    # Если запрос идет через прокси /integrations/analyz, используем его
+    base_path = request.headers.get('X-Forwarded-Prefix', '')
+    if not base_path:
+        # Проверяем Referer
+        referer = request.headers.get('Referer', '')
+        if '/integrations/analyz' in referer:
+            base_path = '/integrations/analyz'
+        else:
+            # Если путь /barcode (без /integrations/analyz), значит через прокси
+            # Базовый путь должен быть /integrations/analyz
+            base_path = '/integrations/analyz'
+    
+    return render_template("barcode/index.html", compact=compact, base_path=base_path)
 
 @barcode_bp.route("/test")
 def test():
@@ -113,7 +127,12 @@ def search_barcode():
     if not query:
         return jsonify({"error": "query is required"}), 400
 
-    conn = get_db_connection()
+    try:
+        conn = get_db_connection()
+    except Exception as e:
+        import sys
+        print(f"ERROR: Cannot connect to barcode database: {e}", file=sys.stderr)
+        return jsonify({"error": "Database connection failed", "details": str(e)}), 500
     cur = conn.cursor()
 
     # First try to find by barcode
@@ -190,65 +209,80 @@ def generate_barcode():
         return jsonify({"success": False, "message": "Missing base_code or quantity"}), 400
     
     # Find the barcode in database
-    conn = get_db_connection()
-    cur = conn.cursor()
+    try:
+        conn = get_db_connection()
+    except Exception as e:
+        import sys
+        print(f"ERROR: Cannot connect to barcode database: {e}", file=sys.stderr)
+        return jsonify({"success": False, "message": "Database connection failed", "details": str(e)}), 500
     
-    # First try to find by barcode
-    cur.execute(
-        "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE barcode = ?",
-        (base_code,),
-    )
-    row = cur.fetchone()
-    
-    if row:
-        # Found by barcode, get all products with same group_code
-        group_code = row[1]
-        cur.execute(
-            "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE group_code = ? AND quantity = ?",
-            (group_code, quantity),
-        )
-        target_row = cur.fetchone()
-        conn.close()
+    try:
+        cur = conn.cursor()
         
-        if target_row:
-            # Found the specific barcode with quantity
-            barcode_string = target_row[3]  # Use the actual barcode from database
-            
-            # Generate barcode image URL
-            barcode_url = f"https://barcode.tec-it.com/barcode.ashx?data={urllib.parse.quote(barcode_string)}&code=Code128&dpi=150&format=PNG"
-            
-            return jsonify({
-                "success": True,
-                "barcode_string": barcode_string,
-                "image": barcode_url,
-                "product_name": target_row[2]  # Добавляем название продукта
-            })
-        else:
-            return jsonify({"success": False, "message": f"Barcode with quantity {quantity} not found for group {group_code}"}), 404
-    else:
-        # Try to find by group_code
+        # First try to find by barcode
         cur.execute(
-            "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE group_code = ? AND quantity = ?",
-            (base_code, quantity),
+            "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE barcode = ?",
+            (base_code,),
         )
-        target_row = cur.fetchone()
-        conn.close()
+        row = cur.fetchone()
         
-        if target_row:
-            # Found the specific barcode with quantity
-            barcode_string = target_row[3]  # Use the actual barcode from database
+        if row:
+            # Found by barcode, get all products with same group_code
+            group_code = row[1]
+            cur.execute(
+                "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE group_code = ? AND quantity = ?",
+                (group_code, quantity),
+            )
+            target_row = cur.fetchone()
             
-            # Generate barcode image URL
-            barcode_url = f"https://barcode.tec-it.com/barcode.ashx?data={urllib.parse.quote(barcode_string)}&code=Code128&dpi=150&format=PNG"
-            
-            return jsonify({
-                "success": True,
-                "barcode_string": barcode_string,
-                "image": barcode_url,
-                "product_name": target_row[2]  # Добавляем название продукта
-            })
+            if target_row:
+                # Found the specific barcode with quantity
+                barcode_string = target_row[3]  # Use the actual barcode from database
+                
+                # Generate barcode image URL
+                barcode_url = f"https://barcode.tec-it.com/barcode.ashx?data={urllib.parse.quote(barcode_string)}&code=Code128&dpi=150&format=PNG"
+                
+                conn.close()
+                return jsonify({
+                    "success": True,
+                    "barcode_string": barcode_string,
+                    "image": barcode_url,
+                    "product_name": target_row[2]  # Добавляем название продукта
+                })
+            else:
+                conn.close()
+                return jsonify({"success": False, "message": f"Barcode with quantity {quantity} not found for group {group_code}"}), 404
         else:
-            return jsonify({"success": False, "message": f"Barcode with quantity {quantity} not found for group {base_code}"}), 404
+            # Try to find by group_code
+            cur.execute(
+                "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE group_code = ? AND quantity = ?",
+                (base_code, quantity),
+            )
+            target_row = cur.fetchone()
+            
+            if target_row:
+                # Found the specific barcode with quantity
+                barcode_string = target_row[3]  # Use the actual barcode from database
+                
+                # Generate barcode image URL
+                barcode_url = f"https://barcode.tec-it.com/barcode.ashx?data={urllib.parse.quote(barcode_string)}&code=Code128&dpi=150&format=PNG"
+                
+                conn.close()
+                return jsonify({
+                    "success": True,
+                    "barcode_string": barcode_string,
+                    "image": barcode_url,
+                    "product_name": target_row[2]  # Добавляем название продукта
+                })
+            else:
+                conn.close()
+                return jsonify({"success": False, "message": f"Barcode with quantity {quantity} not found for group {base_code}"}), 404
+    except Exception as e:
+        if conn:
+            conn.close()
+        import sys
+        print(f"ERROR: Database query failed: {e}", file=sys.stderr)
+        return jsonify({"success": False, "message": "Database query failed", "details": str(e)}), 500
 
 @barcode_bp.route("/api/save-barcode", methods=["POST"])
 def save_barcode():
@@ -261,45 +295,58 @@ def save_barcode():
         return jsonify({"success": False, "message": "Missing base_code or quantity"}), 400
     
     # Find the barcode in database
-    conn = get_db_connection()
-    cur = conn.cursor()
+    try:
+        conn = get_db_connection()
+    except Exception as e:
+        import sys
+        print(f"ERROR: Cannot connect to barcode database: {e}", file=sys.stderr)
+        return jsonify({"success": False, "message": "Database connection failed", "details": str(e)}), 500
     
-    # First try to find by barcode
-    cur.execute(
-        "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE barcode = ?",
-        (base_code,),
-    )
-    row = cur.fetchone()
-    
-    if row:
-        # Found by barcode, get all products with same group_code
-        group_code = row[1]
-        cur.execute(
-            "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE group_code = ? AND quantity = ?",
-            (group_code, quantity),
-        )
-        target_row = cur.fetchone()
-        conn.close()
+    try:
+        cur = conn.cursor()
         
-        if target_row:
-            # Found the specific barcode with quantity
-            barcode_string = target_row[3]  # Use the actual barcode from database
-        else:
-            return jsonify({"success": False, "message": f"Barcode with quantity {quantity} not found for group {group_code}"}), 404
-    else:
-        # Try to find by group_code
+        # First try to find by barcode
         cur.execute(
-            "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE group_code = ? AND quantity = ?",
-            (base_code, quantity),
+            "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE barcode = ?",
+            (base_code,),
         )
-        target_row = cur.fetchone()
-        conn.close()
+        row = cur.fetchone()
         
-        if target_row:
-            # Found the specific barcode with quantity
-            barcode_string = target_row[3]  # Use the actual barcode from database
+        if row:
+            # Found by barcode, get all products with same group_code
+            group_code = row[1]
+            cur.execute(
+                "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE group_code = ? AND quantity = ?",
+                (group_code, quantity),
+            )
+            target_row = cur.fetchone()
+            
+            if target_row:
+                # Found the specific barcode with quantity
+                barcode_string = target_row[3]  # Use the actual barcode from database
+            else:
+                conn.close()
+                return jsonify({"success": False, "message": f"Barcode with quantity {quantity} not found for group {group_code}"}), 404
         else:
-            return jsonify({"success": False, "message": f"Barcode with quantity {quantity} not found for group {base_code}"}), 404
+            # Try to find by group_code
+            cur.execute(
+                "SELECT id, group_code, product_name, barcode, quantity FROM products WHERE group_code = ? AND quantity = ?",
+                (base_code, quantity),
+            )
+            target_row = cur.fetchone()
+            
+            if target_row:
+                # Found the specific barcode with quantity
+                barcode_string = target_row[3]  # Use the actual barcode from database
+            else:
+                conn.close()
+                return jsonify({"success": False, "message": f"Barcode with quantity {quantity} not found for group {base_code}"}), 404
+    except Exception as e:
+        if conn:
+            conn.close()
+        import sys
+        print(f"ERROR: Database query failed: {e}", file=sys.stderr)
+        return jsonify({"success": False, "message": "Database query failed", "details": str(e)}), 500
     
     # Generate barcode image URL with scale
     # Calculate width based on scale (default width is around 300px)

@@ -3,7 +3,7 @@ const APP_VERSION = '0.0.1';
 
 // Автоматическое определение базового пути из URL
 function getAnalyzBasePath() {
-    // Если установлен глобально - используем его
+    // Если установлен глобально - используем его (приоритет)
     if (typeof window !== 'undefined' && window.__ANALYZ_BASE_PATH) {
         return window.__ANALYZ_BASE_PATH;
     }
@@ -17,6 +17,11 @@ function getAnalyzBasePath() {
             if (match) {
                 return match[1];
             }
+        }
+        // Если путь /barcode (без /integrations/analyz), значит через прокси
+        // Базовый путь должен быть /integrations/analyz
+        if (pathname === '/barcode' || pathname.startsWith('/barcode/')) {
+            return '/integrations/analyz';
         }
         // Если путь содержит /barcode, берем путь до /barcode
         if (pathname.includes('/barcode')) {

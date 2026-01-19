@@ -48,6 +48,7 @@ MAX_ROWS = int(os.environ.get("MAX_ROWS", "85000"))  # Максимальное 
 MAX_COLS = int(os.environ.get("MAX_COLS", "75"))  # Максимальное количество столбцов: 75
 
 # Honor reverse-proxy headers (X-Forwarded-*) so url_for keeps mounted prefix
+# x_prefix=1 позволяет использовать X-Forwarded-Prefix для определения базового пути
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # Регистрируем Blueprint для генератора штрих-кодов
