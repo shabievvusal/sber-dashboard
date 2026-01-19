@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { getCurrentHours } from '../constants';
-import { format } from 'date-fns';
 import CompanyOperationsManager from './CompanyOperationsManager';
 import { useAuth } from '../contexts/AuthContext';
 
