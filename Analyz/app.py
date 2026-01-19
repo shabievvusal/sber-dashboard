@@ -46,8 +46,16 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.register_blueprint(barcode_bp)
 
 # Пути для хранения файла сотрудников (утверждающий -> компания)
-EMPLOYEES_FILE_PATH = os.path.join(os.path.dirname(__file__), "employees.csv")
-EMPLOYEES_XLSX_PATH = os.path.join(os.path.dirname(__file__), "employees.xlsx")
+# В Docker используем /app/analyz-data, локально - относительный путь
+_default_employees_path = os.path.join(os.path.dirname(__file__), "employees.csv")
+_default_employees_xlsx_path = os.path.join(os.path.dirname(__file__), "employees.xlsx")
+EMPLOYEES_FILE_PATH = os.environ.get("EMPLOYEES_FILE_PATH", _default_employees_path)
+EMPLOYEES_XLSX_PATH = os.environ.get("EMPLOYEES_XLSX_PATH", _default_employees_xlsx_path)
+# Если путь относительный, делаем его абсолютным
+if not os.path.isabs(EMPLOYEES_FILE_PATH):
+    EMPLOYEES_FILE_PATH = os.path.abspath(EMPLOYEES_FILE_PATH)
+if not os.path.isabs(EMPLOYEES_XLSX_PATH):
+    EMPLOYEES_XLSX_PATH = os.path.abspath(EMPLOYEES_XLSX_PATH)
 
 # Кэш маппинга сотрудников по mtime
 _EMPLOYEES_CACHE: Dict[str, object] = {

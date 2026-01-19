@@ -50,6 +50,8 @@ services:
       - ANALYZ_PORT=5050
       - ANALYZ_HOST=0.0.0.0
       - DB_PATH=/app/data/database.sqlite3
+      - EMPLOYEES_FILE_PATH=/app/analyz-data/employees.csv
+      - EMPLOYEES_XLSX_PATH=/app/analyz-data/employees.xlsx
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-dev-secret-key}
@@ -58,6 +60,7 @@ services:
       - MAX_COLS=${MAX_COLS:-75}
     volumes:
       - ./Analyz/data_days:/app/data_days
+      - ./Analyz:/app/analyz-data
       - analyz-db:/app/data
       - ./Analyz/logs:/app/logs
     networks:
