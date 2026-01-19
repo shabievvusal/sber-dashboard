@@ -43,8 +43,10 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Увеличиваем лимит размера тела запроса для проксирования больших файлов в Analyz
+// По умолчанию Express имеет лимит 100kb, увеличиваем до 100MB
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 app.use(session({
   secret: 'ops-secret-key-change-in-production',
@@ -70,9 +72,19 @@ app.use(
     // даже если Flask успел всё обработать и записать результаты.
     proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
     timeout: ANALYZ_PROXY_TIMEOUT_MS,
+    // Увеличиваем лимит размера тела запроса для проксирования
+    limit: '100mb',
     pathRewrite: (pathStr: string) => {
       const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
       return rewritten === '' ? '/' : rewritten;
+    },
+    onError: (err, req, res) => {
+      console.error('Proxy error:', err.message);
+      res.status(502).json({ error: 'Bad Gateway', message: err.message });
+    },
+    onProxyReq: (proxyReq, req, res) => {
+      // Увеличиваем таймаут для больших запросов
+      proxyReq.setTimeout(ANALYZ_PROXY_TIMEOUT_MS);
     }
   })
 );
