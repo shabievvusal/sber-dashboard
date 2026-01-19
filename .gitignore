@@ -1,0 +1,71 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment
+.env
+.env.local
+.env.*.local
+.venv
+venv/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.db
+*.sqlite3
+*.sqlite
+
+# Data
+data_days/
+uploads/
+*.csv
+*.xlsx
+*.xls
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Shell history
+.bash_history
+*.bash_history
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Deployment
+deployment_*/
+*.bat
+start_background.py
+setup_*.py
+create_deployment_archive.py
+
+# Temporary
+*.tmp
+*.temp
+.cache/
+.pytest_cache/
+.pids
+
+# Docker
+.docker/

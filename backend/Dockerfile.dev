@@ -1,0 +1,24 @@
+# Backend Development Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Копируем package файлы
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Устанавливаем зависимости (включая dev)
+RUN npm install
+
+# Создаем директории
+RUN mkdir -p uploads/employee_photos logs
+
+# Открываем порт
+EXPOSE 5000
+
+# Переменные окружения
+ENV NODE_ENV=development
+
+# Запуск в режиме разработки с hot reload
+CMD ["npm", "run", "dev"]
+

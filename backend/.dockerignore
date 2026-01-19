@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+*.log
+logs/
+.env
+.env.local
+*.tsbuildinfo
+__tests__
+*.test.ts
+*.spec.ts
+coverage/
+

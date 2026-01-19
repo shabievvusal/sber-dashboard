@@ -1,0 +1,20 @@
+# Frontend Development Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Копируем package файлы
+COPY package*.json ./
+
+# Устанавливаем зависимости
+RUN npm install
+
+# Открываем порт
+EXPOSE 3000
+
+# Переменные окружения
+ENV NODE_ENV=development
+
+# Запуск в режиме разработки с hot reload
+CMD ["npm", "run", "dev", "--", "--host"]
+

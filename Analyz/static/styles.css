@@ -1,0 +1,104 @@
+body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+.container { max-width: 800px; margin: 0 auto; }
+.search-block { display: flex; gap: 8px; align-items: center; }
+.search-block input { flex: 1; padding: 8px; font-size: 16px; }
+.search-block select, .search-block button { padding: 8px 12px; font-size: 16px; }
+
+.results { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+.result-info { margin-bottom: 8px; font-weight: bold; }
+.button { padding: 10px 14px; font-size: 18px; cursor: pointer; border: 1px solid #333; background: #f7f7f7; border-radius: 6px; }
+.button:hover { background: #e9e9e9; }
+
+.print-area { position: fixed; left: -10000px; top: -10000px; }
+.label { width: 105mm; height: 75mm; border: 1px solid #000; display: flex; align-items: center; justify-content: center; }
+.barcode-img { max-width: 90%; max-height: 90%; }
+
+@media print {
+	body { 
+		margin: 0; 
+		padding: 0; 
+		background: white;
+	}
+	.no-print { display: none !important; }
+	.print-only { display: block !important; }
+	.label {
+		width: 105mm;
+		height: 75mm;
+		border: 1px solid #000;
+		display: flex !important;
+		align-items: center;
+		justify-content: center;
+		flex-direction: column;
+		margin: 0 auto;
+		background: white;
+		page-break-after: always;
+		position: relative;
+	}
+	canvas {
+		max-width: 90%;
+		max-height: 70%;
+		display: block !important;
+		visibility: visible !important;
+	}
+	.print-area {
+		position: absolute !important;
+		top: 0 !important;
+		left: 0 !important;
+		width: 100% !important;
+		height: 100% !important;
+		background: white !important;
+		z-index: 9999 !important;
+	}
+}
+
+/* Стили для результатов утвердителя */
+.approver-results {
+  margin-top: 10px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+.approver-results.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.approver-results h6 {
+  margin-bottom: 15px;
+  color: #495057;
+  font-weight: 600;
+}
+
+.results-grid {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.result-item {
+  display: table-row;
+}
+
+.result-item .label {
+  display: table-cell;
+  padding: 8px 12px;
+  background-color: #e9ecef;
+  border: 1px solid #dee2e6;
+  font-weight: 600;
+  color: #495057;
+  width: 30%;
+}
+
+.result-item .value {
+  display: table-cell;
+  padding: 8px 12px;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  font-weight: 500;
+}

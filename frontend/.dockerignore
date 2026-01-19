@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+*.log
+logs/
+.env
+.env.local
+.env.production.local
+.env.development.local
+dist/
+coverage/
+__tests__
+*.test.tsx
+*.spec.tsx
+

@@ -1,0 +1,74 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.pytest_cache
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Deployment
+deployment_*/
+*.bat
+*.sh
+start.py
+start_background.py
+setup_*.py
+create_deployment_archive.py
+
+# Documentation
+*.md
+!README.md
+
+# Data
+*.db
+*.sqlite3
+data_days/
+uploads/
+*.csv
+*.xlsx
+
+# Temporary files
+*.tmp
+*.temp
+.cache
+

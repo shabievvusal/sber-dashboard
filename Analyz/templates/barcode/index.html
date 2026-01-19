@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>ШКВАНТ</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/main.css" rel="stylesheet">
+    
+<!-- compact режим: используется для встраивания в iframe, настройки такие же, как у админа -->
+</head>
+<body{% if compact %} class="compact-mode"{% endif %}>
+    <div class="container">
+        <!-- proClock скрыт по требованию -->
+        <div id="proClock" style="display: none;"></div>
+        
+        <!-- Компактный режим: только поле ввода и кнопка ручного ввода -->
+        {% if compact %}
+        <div class="compact-input-container" id="compactInputContainer">
+            <button id="compactManualBtn" class="compact-manual-btn" title="Переключить на ручной ввод">
+                ✍️
+            </button>
+            <input
+                type="text"
+                id="baseCode"
+                class="form-control compact-input"
+                placeholder="Отсканируй ШК"
+            >
+        </div>
+        {% endif %}
+        
+        <!-- Полный режим: обычный интерфейс -->
+        {% if not compact %}
+        <div class="header">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h1>
+                    <img src="/favicon.ico" alt="СБЕРЛОГИСТИКА" class="icon" id="logoIcon" style="width: 2.5rem; height: 2.5rem; cursor: pointer;" title="Кликните для ручного ввода">
+                    <span class="text-container" id="headerText">СБЕРЛОГИСТИКА</span>
+                </h1>
+                <!-- Поле ввода ШК в правом верхнем углу -->
+                <div style="max-width: 260px; width: 100%; margin-left: 1rem;">
+                    <input
+                        type="text"
+                        id="baseCode"
+                        class="form-control"
+                        placeholder="Отсканируй ШК"
+                        style="width: 100%;"
+                    >
+                </div>
+            </div>
+            <p style="margin-top: 0.5rem;">Профессиональный генератор штрих-кодов для упаковок</p>
+        </div>
+        {% endif %}
+        
+        <!-- Компактный режим: скрываем основной контент до ввода данных -->
+        <div class="main-content{% if compact %} compact-hidden{% endif %}" id="mainContent">
+            <div class="card input-card">
+                <div class="card-header">
+                    <i class="fas fa-keyboard"></i>
+                    Ввод данных
+                </div>
+                <div class="card-body">
+                    <button id="confirmBtn" class="btn btn-primary">
+                        <i class="fas fa-check"></i>
+                        Подтвердить
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card hidden" id="quantityCard">
+                <div class="card-header">
+                    <i class="fas fa-list-ol"></i>
+                    Выберите количество (шт в ШК)
+                </div>
+                <div class="card-body">
+                    <div class="quantity-grid" id="quantityGrid"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card hidden" id="previewCard">
+            <div class="card-header">
+                <i class="fas fa-eye"></i>
+                Предпросмотр этикетки
+                <button id="previewSettingsBtn" class="btn btn-secondary" style="margin-left: auto; padding: 0.5rem; min-width: auto;">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="preview-container">
+                    <div id="previewImageContainer">
+                        <img id="previewImage" class="preview-image" alt="Предпросмотр этикетки">
+                        <div id="productName" class="product-name" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls-section hidden" id="controlsSection">
+            <div class="action-buttons">
+                <button id="saveBtn" class="btn btn-success">
+                    <i class="fas fa-download"></i>
+                    Сохранить PNG
+                </button>
+                <button id="printBtn" class="btn btn-secondary">
+                    <i class="fas fa-print"></i>
+                    Печать
+                </button>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Обработка запроса...</p>
+        </div>
+        
+        <!-- Плавающая иконка шестеренки -->
+        <div class="floating-gear" id="floatingGear">
+            <i class="fas fa-cog"></i>
+            <div class="gear-tooltip">Настройки</div>
+        </div>
+    </div>
+    
+    <!-- Контейнер для уведомлений -->
+    <div class="notification-container" id="notificationContainer"></div>
+    
+    <!-- Всплывающее окно настроек -->
+    <div class="popup-overlay" id="settingsOverlay"></div>
+    <div class="settings-popup" id="settingsPopup">
+        <div class="settings-popup-header">
+            <div class="settings-popup-title">
+                <i class="fas fa-cog"></i>
+                Настройки
+            </div>
+            <button class="settings-popup-close" id="settingsClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="settings-section">
+            <div class="settings-section-title">
+                <i class="fas fa-palette"></i>
+                Внешний вид
+            </div>
+            <div class="settings-item">
+                <div class="settings-item-label">
+                    <i class="fas fa-moon"></i>
+                    Темная тема
+                </div>
+                <div class="toggle-switch" id="darkThemeToggle"></div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-item-label">
+                    <i class="fas fa-bolt"></i>
+                    PRO режим
+                </div>
+                <div class="toggle-switch" id="proModeToggle"></div>
+            </div>
+            <div class="settings-item">
+                <div class="settings-item-label">
+                    <i class="fas fa-rocket"></i>
+                    Космос (фон)
+                </div>
+                <div class="toggle-switch" id="cosmosToggle"></div>
+            </div>
+        </div>
+        <div class="settings-actions"> <button class="btn btn-primary" id="settingsSave"> <i class="fas fa-save"></i> Сохранить </button> <button class="btn btn-secondary" id="settingsCancel"> <i class="fas fa-times"></i> Отмена </button> </div>
+    </div>
+    
+    <div id="printArea" class="print-area" aria-hidden="true"></div>
+
+    <!-- Кнопка "Главная" в левом нижнем углу -->
+    <div class="home-button-container">
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm home-button" title="Главная">
+            <i class="fas fa-home"></i>
+        </a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
+
