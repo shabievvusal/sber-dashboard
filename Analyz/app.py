@@ -227,9 +227,13 @@ def _build_day_summary(
     aggr = analyze_dataframe(df)
 
     emp_df = None
-    candidate_path = EMPLOYEES_XLSX_PATH if os.path.exists(EMPLOYEES_XLSX_PATH) else (EMPLOYEES_FILE_PATH if os.path.exists(EMPLOYEES_FILE_PATH) else None)
+    candidate_path = _get_employees_file_path()
     if candidate_path:
-        emp_df = _try_read_employees(candidate_path)
+        try:
+            emp_df = _try_read_employees(candidate_path)
+        except Exception as e:
+            app.logger.warning(f"Не удалось прочитать файл сотрудников {candidate_path}: {e}")
+            emp_df = None
     if emp_df is not None:
         mapping = _extract_employees_mapping(emp_df)
         if mapping is not None and not mapping.empty:
@@ -750,6 +754,14 @@ def _try_read_employees_csv(path: str) -> pd.DataFrame:
 				last_err = e
 	raise ValueError(f"Не удалось прочитать файл сотрудников: {last_err}")
 
+
+def _get_employees_file_path() -> Optional[str]:
+    """Безопасно получает путь к файлу сотрудников, исключая директории."""
+    if os.path.exists(EMPLOYEES_XLSX_PATH) and not os.path.isdir(EMPLOYEES_XLSX_PATH):
+        return EMPLOYEES_XLSX_PATH
+    elif os.path.exists(EMPLOYEES_FILE_PATH) and not os.path.isdir(EMPLOYEES_FILE_PATH):
+        return EMPLOYEES_FILE_PATH
+    return None
 
 def _try_read_employees(path: str) -> pd.DataFrame:
     """Читает файл сотрудников как CSV или Excel по расширению."""
@@ -2076,11 +2088,7 @@ def analyze():
 		# Если есть файл сотрудников, присоединим компании (робастно)
 		emp_df = None
 		# Попытка взять из кэша; инвалидация по времени модификации
-		candidate_path = None
-		if os.path.exists(EMPLOYEES_XLSX_PATH):
-			candidate_path = EMPLOYEES_XLSX_PATH
-		elif os.path.exists(EMPLOYEES_FILE_PATH):
-			candidate_path = EMPLOYEES_FILE_PATH
+		candidate_path = _get_employees_file_path()
 
 		if candidate_path is not None:
 			try:
@@ -2320,7 +2328,7 @@ def analyze_day(date_str: str):
                 pass
         # Маппинг сотрудников
         emp_df = None
-        candidate_path = EMPLOYEES_XLSX_PATH if os.path.exists(EMPLOYEES_XLSX_PATH) else (EMPLOYEES_FILE_PATH if os.path.exists(EMPLOYEES_FILE_PATH) else None)
+        candidate_path = _get_employees_file_path()
         if candidate_path:
             emp_df = _try_read_employees(candidate_path)
         if emp_df is not None:
@@ -2484,7 +2492,7 @@ def employee_stats(date_str: str):
 
         # 3) Маппинг сотрудников (Компания)
         emp_df = None
-        candidate_path = EMPLOYEES_XLSX_PATH if os.path.exists(EMPLOYEES_XLSX_PATH) else (EMPLOYEES_FILE_PATH if os.path.exists(EMPLOYEES_FILE_PATH) else None)
+        candidate_path = _get_employees_file_path()
         if candidate_path:
             try:
                 emp_df = _try_read_employees(candidate_path)
@@ -2647,7 +2655,7 @@ def _generate_faststat_tasks(date_str: str) -> Dict[str, Any]:
         # Загружаем маппинг сотрудников для получения компаний
         employee_company_map = {}
         emp_df = None
-        candidate_path = EMPLOYEES_XLSX_PATH if os.path.exists(EMPLOYEES_XLSX_PATH) else (EMPLOYEES_FILE_PATH if os.path.exists(EMPLOYEES_FILE_PATH) else None)
+        candidate_path = _get_employees_file_path()
         if candidate_path:
             try:
                 emp_df = _try_read_employees(candidate_path)
@@ -3015,7 +3023,7 @@ def _get_companies_for_date(date_str: str) -> List[str]:
         
         # Загружаем маппинг сотрудников
         employee_company_map = {}
-        candidate_path = EMPLOYEES_XLSX_PATH if os.path.exists(EMPLOYEES_XLSX_PATH) else (EMPLOYEES_FILE_PATH if os.path.exists(EMPLOYEES_FILE_PATH) else None)
+        candidate_path = _get_employees_file_path()
         if candidate_path:
             try:
                 emp_df = _try_read_employees(candidate_path)
@@ -3551,7 +3559,7 @@ def get_idle_times(date_str: str):
         
         # Загружаем маппинг сотрудников
         employee_company_map = {}
-        candidate_path = EMPLOYEES_XLSX_PATH if os.path.exists(EMPLOYEES_XLSX_PATH) else (EMPLOYEES_FILE_PATH if os.path.exists(EMPLOYEES_FILE_PATH) else None)
+        candidate_path = _get_employees_file_path()
         if candidate_path:
             try:
                 emp_df = _try_read_employees(candidate_path)
