@@ -177,3 +177,12 @@ if __name__ == "__main__":
         import_excel_to_postgres(EXCEL_PATH)
     else:
         import_excel_to_sqlite(EXCEL_PATH)
+
+
+# Функции для использования в других модулях
+def import_excel_file(excel_path: str) -> None:
+    """Универсальная функция импорта, определяет тип БД автоматически."""
+    if USE_POSTGRES:
+        import_excel_to_postgres(excel_path)
+    else:
+        import_excel_to_sqlite(excel_path)

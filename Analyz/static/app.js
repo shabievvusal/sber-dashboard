@@ -172,6 +172,11 @@ class BarcodeApp {
         this.settingsClose = document.getElementById('settingsClose');
         this.settingsCancel = document.getElementById('settingsCancel');
         this.settingsSave = document.getElementById('settingsSave');
+        
+        // Barcode data upload elements
+        this.barcodeDataFile = document.getElementById('barcodeDataFile');
+        this.barcodeUploadBtn = document.getElementById('barcodeUploadBtn');
+        this.barcodeUploadStatus = document.getElementById('barcodeUploadStatus');
         this.darkThemeToggle = document.getElementById('darkThemeToggle');
         this.proModeToggle = document.getElementById('proModeToggle');
         this.proClock = document.getElementById('proClock');
@@ -238,6 +243,22 @@ class BarcodeApp {
         if (this.settingsOverlay) {
             this.settingsOverlay.addEventListener('click', () => this.hideSettings());
         }
+        
+        // Barcode data upload events
+        if (this.barcodeUploadBtn && this.barcodeDataFile) {
+            this.barcodeUploadBtn.addEventListener('click', () => {
+                this.barcodeDataFile.click();
+            });
+        }
+        if (this.barcodeDataFile) {
+            this.barcodeDataFile.addEventListener('change', (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                    this.uploadBarcodeData(file);
+                }
+            });
+        }
+        
         if (this.darkThemeToggle) {
             this.darkThemeToggle.addEventListener('click', () => this.toggleDarkTheme());
         }
@@ -796,6 +817,84 @@ class BarcodeApp {
         this.hideSettings();
         this.showNotification('Настройки сохранены', 'success');
         this.focusInputIfPro();
+    }
+    
+    async uploadBarcodeData(file) {
+        if (!file) {
+            this.showNotification('Файл не выбран', 'error');
+            return;
+        }
+        
+        // Проверка типа файла
+        const allowedTypes = ['.xlsx', '.xls'];
+        const fileExt = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        if (!allowedTypes.includes(fileExt)) {
+            this.showNotification('Разрешены только Excel файлы (.xlsx, .xls)', 'error');
+            return;
+        }
+        
+        // Проверка размера (макс 50MB)
+        const maxSize = 50 * 1024 * 1024;
+        if (file.size > maxSize) {
+            this.showNotification('Размер файла не должен превышать 50MB', 'error');
+            return;
+        }
+        
+        // Показываем статус загрузки
+        if (this.barcodeUploadStatus) {
+            this.barcodeUploadStatus.style.display = 'block';
+            this.barcodeUploadStatus.textContent = 'Загрузка и импорт данных...';
+            this.barcodeUploadStatus.style.color = '#666';
+        }
+        
+        if (this.barcodeUploadBtn) {
+            this.barcodeUploadBtn.disabled = true;
+            this.barcodeUploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Импорт...';
+        }
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const response = await fetch(buildAnalyzUrl('/barcode/api/upload-data'), {
+                method: 'POST',
+                body: formData,
+                cache: 'no-store'
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Ошибка при импорте данных');
+            }
+            
+            if (this.barcodeUploadStatus) {
+                this.barcodeUploadStatus.textContent = `✅ ${data.message || 'Данные успешно импортированы'}`;
+                this.barcodeUploadStatus.style.color = '#28a745';
+            }
+            
+            this.showNotification(data.message || 'Данные успешно импортированы', 'success');
+            
+            // Очищаем input для возможности повторной загрузки
+            if (this.barcodeDataFile) {
+                this.barcodeDataFile.value = '';
+            }
+        } catch (error) {
+            console.error('Error uploading barcode data:', error);
+            const errorMessage = error.message || 'Ошибка при импорте данных';
+            
+            if (this.barcodeUploadStatus) {
+                this.barcodeUploadStatus.textContent = `❌ ${errorMessage}`;
+                this.barcodeUploadStatus.style.color = '#dc3545';
+            }
+            
+            this.showNotification(errorMessage, 'error');
+        } finally {
+            if (this.barcodeUploadBtn) {
+                this.barcodeUploadBtn.disabled = false;
+                this.barcodeUploadBtn.innerHTML = '<i class="fas fa-upload"></i> Выбрать файл';
+            }
+        }
     }
 
     toggleProMode() {

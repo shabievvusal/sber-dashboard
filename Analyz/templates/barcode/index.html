@@ -168,6 +168,37 @@
                 <div class="toggle-switch" id="cosmosToggle"></div>
             </div>
         </div>
+        
+        <div class="settings-section">
+            <div class="settings-section-title">
+                <i class="fas fa-database"></i>
+                База данных штрихкодов
+            </div>
+            <div class="settings-item">
+                <div class="settings-item-label">
+                    <i class="fas fa-file-excel"></i>
+                    Загрузить Excel файл
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <input
+                        type="file"
+                        id="barcodeDataFile"
+                        accept=".xlsx,.xls"
+                        style="display: none;"
+                    />
+                    <button
+                        type="button"
+                        id="barcodeUploadBtn"
+                        class="btn btn-primary"
+                        style="padding: 0.5rem 1rem; font-size: 0.9rem;"
+                    >
+                        <i class="fas fa-upload"></i>
+                        Выбрать файл
+                    </button>
+                    <div id="barcodeUploadStatus" style="font-size: 0.85rem; color: #666; display: none;"></div>
+                </div>
+            </div>
+        </div>
         <div class="settings-actions"> <button class="btn btn-primary" id="settingsSave"> <i class="fas fa-save"></i> Сохранить </button> <button class="btn btn-secondary" id="settingsCancel"> <i class="fas fa-times"></i> Отмена </button> </div>
     </div>
     

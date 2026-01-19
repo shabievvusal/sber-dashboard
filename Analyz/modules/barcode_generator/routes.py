@@ -299,3 +299,67 @@ def save_barcode():
             return jsonify({"success": False, "message": "Failed to generate barcode image"}), 500
     except Exception as e:
         return jsonify({"success": False, "message": f"Error generating barcode: {str(e)}"}), 500
+
+@barcode_bp.route("/api/upload-data", methods=["POST"])
+def upload_barcode_data():
+    """Загрузка и импорт Excel файла с данными штрихкодов."""
+    if 'file' not in request.files:
+        return jsonify({"success": False, "message": "Файл не был отправлен"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"success": False, "message": "Имя файла пустое"}), 400
+    
+    # Проверка типа файла
+    filename = file.filename.lower()
+    if not (filename.endswith('.xlsx') or filename.endswith('.xls')):
+        return jsonify({"success": False, "message": "Разрешены только Excel файлы (.xlsx, .xls)"}), 400
+    
+    try:
+        # Сохраняем файл во временную директорию
+        import tempfile
+        import shutil
+        
+        # Создаем временный файл
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            file.save(tmp_file.name)
+            tmp_path = tmp_file.name
+        
+        try:
+            # Импортируем данные
+            # Добавляем путь к модулю import_data в sys.path
+            import sys
+            analyz_data_path = os.path.join(os.path.dirname(__file__), "..", "..")
+            analyz_data_path = os.path.abspath(analyz_data_path)
+            if analyz_data_path not in sys.path:
+                sys.path.insert(0, analyz_data_path)
+            
+            # Получаем количество записей перед импортом
+            import pandas as pd
+            df = pd.read_excel(tmp_path, engine="openpyxl", header=None)
+            df = df.iloc[:, :4]
+            df.columns = ["group_code", "product_name", "barcode", "quantity"]
+            df = df.dropna(how="all")
+            df = df.dropna(subset=["group_code", "barcode", "quantity"])
+            record_count = len(df)
+            
+            # Импортируем данные
+            from import_data import import_excel_file
+            import_excel_file(tmp_path)
+            
+            return jsonify({
+                "success": True,
+                "message": f"Данные успешно импортированы в базу данных ({record_count} записей)"
+            }), 200
+        finally:
+            # Удаляем временный файл
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+                
+    except Exception as e:
+        import sys
+        print(f"ERROR: Failed to import barcode data: {e}", file=sys.stderr)
+        return jsonify({
+            "success": False,
+            "message": f"Ошибка при импорте данных: {str(e)}"
+        }), 500
