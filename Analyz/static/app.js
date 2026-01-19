@@ -1,6 +1,36 @@
 // Версия приложения
 const APP_VERSION = '0.0.1';
-const ANALYZ_BASE_PATH = (typeof window !== 'undefined' && window.__ANALYZ_BASE_PATH) ? window.__ANALYZ_BASE_PATH : '';
+
+// Автоматическое определение базового пути из URL
+function getAnalyzBasePath() {
+    // Если установлен глобально - используем его
+    if (typeof window !== 'undefined' && window.__ANALYZ_BASE_PATH) {
+        return window.__ANALYZ_BASE_PATH;
+    }
+    
+    // Автоматически определяем из текущего URL
+    if (typeof window !== 'undefined' && window.location) {
+        const pathname = window.location.pathname;
+        // Если путь содержит /integrations/analyz, используем его как базовый
+        if (pathname.includes('/integrations/analyz')) {
+            const match = pathname.match(/^(\/integrations\/analyz)/);
+            if (match) {
+                return match[1];
+            }
+        }
+        // Если путь содержит /barcode, берем путь до /barcode
+        if (pathname.includes('/barcode')) {
+            const match = pathname.match(/^(.+)\/barcode/);
+            if (match && match[1]) {
+                return match[1];
+            }
+        }
+    }
+    
+    return '';
+}
+
+const ANALYZ_BASE_PATH = getAnalyzBasePath();
 
 function buildAnalyzUrl(path) {
     if (!path.startsWith('/')) {

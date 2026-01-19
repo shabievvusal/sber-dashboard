@@ -9,7 +9,7 @@
     <title>ШКВАНТ</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="/static/main.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='main.css') }}" rel="stylesheet">
     
 <!-- compact режим: используется для встраивания в iframe, настройки такие же, как у админа -->
 </head>
@@ -180,8 +180,26 @@
         </a>
     </div>
 
+    <script>
+        // Устанавливаем базовый путь для Analyz API
+        // Автоматически определяется из URL, но можно переопределить
+        (function() {
+            if (typeof window !== 'undefined') {
+                // Если не установлен, определяем автоматически
+                if (!window.__ANALYZ_BASE_PATH) {
+                    const pathname = window.location.pathname;
+                    if (pathname.includes('/integrations/analyz')) {
+                        const match = pathname.match(/^(\/integrations\/analyz)/);
+                        if (match) {
+                            window.__ANALYZ_BASE_PATH = match[1];
+                        }
+                    }
+                }
+            }
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <script src="/static/app.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
 
