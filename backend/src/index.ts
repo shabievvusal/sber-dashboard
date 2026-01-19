@@ -63,22 +63,24 @@ app.use(session({
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Прокси для Analyz сервиса
-app.use(
-  '/integrations/analyz',
-  createProxyMiddleware({
-    target: ANALYZ_SERVICE_URL,
-    changeOrigin: true,
-    ws: true,
-    // Для тяжелых операций (загрузка/анализ больших файлов) нужно больше времени, иначе получаем 504,
-    // даже если Flask успел всё обработать и записать результаты.
-    proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
-    timeout: ANALYZ_PROXY_TIMEOUT_MS,
-    pathRewrite: (pathStr: string) => {
-      const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
-      return rewritten === '' ? '/' : rewritten;
-    }
-  })
-);
+const analyzProxyMiddleware = createProxyMiddleware({
+  target: ANALYZ_SERVICE_URL,
+  changeOrigin: true,
+  ws: true,
+  // Для тяжелых операций (загрузка/анализ больших файлов) нужно больше времени, иначе получаем 504,
+  // даже если Flask успел всё обработать и записать результаты.
+  proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
+  timeout: ANALYZ_PROXY_TIMEOUT_MS,
+  pathRewrite: (pathStr: string) => {
+    const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
+    const result = rewritten === '' ? '/' : rewritten;
+    console.log(`Proxying: ${pathStr} -> ${result}`);
+    return result;
+  },
+  logLevel: 'debug'
+});
+
+app.use('/integrations/analyz', analyzProxyMiddleware);
 
 // Routes
 app.use('/api/auth', authRoutes);

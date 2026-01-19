@@ -2223,7 +2223,7 @@ def list_days():
         # Убеждаемся, что директория существует
         if not os.path.exists(DATA_DIR):
             os.makedirs(DATA_DIR, exist_ok=True)
-            return {"days": []}  # Возвращаем пустой список, если директория только что создана
+            return jsonify({"days": []})  # Возвращаем пустой список, если директория только что создана
         
         days: List[str] = []
         # New structure: directories with date names and a CSV inside
