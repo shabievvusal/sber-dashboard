@@ -84,6 +84,20 @@ const proxyErrorHandler = (err: any, req: express.Request, res: express.Response
   }
 };
 
+// Middleware для логирования запросов к прокси
+const proxyLogger = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.log(`[Proxy Request] ${req.method} ${req.url} -> ${ANALYZ_SERVICE_URL}`);
+  
+  // Логируем ответ после завершения
+  const originalSend = res.send;
+  res.send = function(body: any) {
+    console.log(`[Proxy Response] ${req.url} -> ${res.statusCode}`);
+    return originalSend.call(this, body);
+  };
+  
+  next();
+};
+
 // Прокси для Analyz сервиса
 const proxyMiddleware = createProxyMiddleware({
   target: ANALYZ_SERVICE_URL,
@@ -98,16 +112,10 @@ const proxyMiddleware = createProxyMiddleware({
     const result = rewritten === '' ? '/' : rewritten;
     console.log(`[Proxy] ${pathStr} -> ${result} (target: ${ANALYZ_SERVICE_URL})`);
     return result;
-  },
-  onProxyReq: (proxyReq: any, req: express.Request, res: express.Response) => {
-    console.log(`[Proxy Request] ${req.method} ${req.url} -> ${ANALYZ_SERVICE_URL}${proxyReq.path}`);
-  },
-  onProxyRes: (proxyRes: any, req: express.Request, res: express.Response) => {
-    console.log(`[Proxy Response] ${req.url} -> ${proxyRes.statusCode}`);
   }
 });
 
-app.use('/integrations/analyz', proxyMiddleware, proxyErrorHandler);
+app.use('/integrations/analyz', proxyLogger, proxyMiddleware, proxyErrorHandler);
 
 // Health check (до других маршрутов для быстрой проверки)
 app.use('/health', healthRoutes);
