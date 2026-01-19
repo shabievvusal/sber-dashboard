@@ -62,32 +62,34 @@ app.use(session({
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-app.use(
-  '/integrations/analyz',
-  createProxyMiddleware({
-    target: ANALYZ_SERVICE_URL,
-    changeOrigin: true,
-    ws: true,
-    // Для тяжелых операций (загрузка/анализ больших файлов) нужно больше времени, иначе получаем 504,
-    // даже если Flask успел всё обработать и записать результаты.
-    proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
-    timeout: ANALYZ_PROXY_TIMEOUT_MS,
-    pathRewrite: (pathStr: string) => {
-      const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
-      return rewritten === '' ? '/' : rewritten;
-    },
-    onError: (err: Error, req: express.Request, res: express.Response) => {
+// Прокси для Analyz сервиса
+const analyzProxy = createProxyMiddleware({
+  target: ANALYZ_SERVICE_URL,
+  changeOrigin: true,
+  ws: true,
+  // Для тяжелых операций (загрузка/анализ больших файлов) нужно больше времени, иначе получаем 504,
+  // даже если Flask успел всё обработать и записать результаты.
+  proxyTimeout: ANALYZ_PROXY_TIMEOUT_MS,
+  timeout: ANALYZ_PROXY_TIMEOUT_MS,
+  pathRewrite: (pathStr: string) => {
+    const rewritten = pathStr.replace(/^\/integrations\/analyz/, '');
+    return rewritten === '' ? '/' : rewritten;
+  }
+});
+
+// Оборачиваем прокси в middleware для обработки ошибок
+app.use('/integrations/analyz', (req, res, next) => {
+  analyzProxy(req, res, (err: any) => {
+    if (err) {
       console.error('Proxy error:', err.message);
       if (!res.headersSent) {
         res.status(502).json({ error: 'Bad Gateway', message: err.message });
       }
-    },
-    onProxyReq: (proxyReq: any, req: express.Request, res: express.Response) => {
-      // Увеличиваем таймаут для больших запросов
-      proxyReq.setTimeout(ANALYZ_PROXY_TIMEOUT_MS);
+    } else {
+      next();
     }
-  })
-);
+  });
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
