@@ -2579,8 +2579,14 @@ def employee_stats_today():
         days = (days_resp.get("days") or []) if isinstance(days_resp, dict) else []
         if days:
             return employee_stats(days[-1])
-    except Exception:
-        pass
+    except Exception as e:
+        app.logger.error(f"Error in employee_stats_today: {e}", exc_info=True)
+        # Пробуем вернуть данные за сегодня, даже если есть ошибка
+        try:
+            return employee_stats(today)
+        except Exception as e2:
+            app.logger.error(f"Error in employee_stats for today: {e2}", exc_info=True)
+            return jsonify({"error": str(e2), "date": today, "employees": []}), 500
     return employee_stats(today)
 
 def _generate_faststat_tasks(date_str: str) -> Dict[str, Any]:
