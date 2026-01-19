@@ -35,19 +35,79 @@ function getAnalyzBasePath() {
     return '';
 }
 
-const ANALYZ_BASE_PATH = getAnalyzBasePath();
+// Получаем базовый путь при загрузке модуля
+let ANALYZ_BASE_PATH = getAnalyzBasePath();
+
+// Переопределяем функцию для динамического получения базового пути
+function getBasePath() {
+    // Приоритет: глобальная переменная из шаблона
+    if (typeof window !== 'undefined' && window.__ANALYZ_BASE_PATH) {
+        return window.__ANALYZ_BASE_PATH;
+    }
+    
+    // Автоматическое определение
+    if (typeof window !== 'undefined' && window.location) {
+        const pathname = window.location.pathname;
+        const port = window.location.port;
+        const hostname = window.location.hostname;
+        
+        // Если порт 5051 или 5050, значит iframe загружен напрямую (не через nginx)
+        // В этом случае принудительно используем /integrations/analyz
+        // чтобы запросы шли через nginx на порту 3001
+        if (port === '5051' || port === '5050') {
+            console.warn('[Barcode] Direct access detected on port', port, '- forcing base path to /integrations/analyz');
+            console.warn('[Barcode] Requests will go through nginx proxy on port 3001');
+            return '/integrations/analyz';
+        }
+        
+        // Если путь содержит /integrations/analyz, используем его
+        if (pathname.includes('/integrations/analyz')) {
+            const match = pathname.match(/^(\/integrations\/analyz)/);
+            if (match) {
+                return match[1];
+            }
+        }
+        
+        // Если путь /barcode (без /integrations/analyz), значит через прокси
+        if (pathname === '/barcode' || pathname.startsWith('/barcode/')) {
+            return '/integrations/analyz';
+        }
+        
+        // Если путь содержит /barcode, берем путь до /barcode
+        if (pathname.includes('/barcode')) {
+            const match = pathname.match(/^(.+)\/barcode/);
+            if (match && match[1]) {
+                return match[1];
+            }
+        }
+    }
+    
+    // По умолчанию используем /integrations/analyz
+    return '/integrations/analyz';
+}
 
 function buildAnalyzUrl(path) {
+    // Всегда используем относительный путь, чтобы запросы шли через nginx
+    // НИКОГДА не используем window.location.origin для формирования абсолютного URL
     if (!path.startsWith('/')) {
         path = `/${path}`;
     }
-    if (!ANALYZ_BASE_PATH) {
-        return path;
+    
+    // Получаем актуальный базовый путь
+    const basePath = getBasePath();
+    
+    if (basePath) {
+        // Убеждаемся, что путь не начинается с базового пути
+        if (path.startsWith(basePath)) {
+            return path;
+        }
+        const fullPath = `${basePath}${path}`;
+        console.log('[Barcode] Building URL:', path, '->', fullPath);
+        return fullPath;
     }
-    if (path.startsWith(ANALYZ_BASE_PATH)) {
-        return path;
-    }
-    return `${ANALYZ_BASE_PATH}${path}`;
+    
+    // Если базовый путь не установлен, возвращаем путь как есть
+    return path;
 }
 
 class BarcodeApp {

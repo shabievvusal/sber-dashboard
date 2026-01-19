@@ -190,23 +190,34 @@
                 {% else %}
                 // Автоматически определяем из URL
                 const pathname = window.location.pathname;
-                if (pathname.includes('/integrations/analyz')) {
+                const port = window.location.port;
+                
+                // Если порт 5051 или 5050, значит iframe загружен напрямую (не через nginx)
+                // В этом случае принудительно используем /integrations/analyz
+                if (port === '5051' || port === '5050') {
+                    console.warn('[Barcode] Direct access detected on port', port, '- forcing base path to /integrations/analyz');
+                    window.__ANALYZ_BASE_PATH = '/integrations/analyz';
+                } else if (pathname.includes('/integrations/analyz')) {
+                    // Если путь содержит /integrations/analyz, используем его
                     const match = pathname.match(/^(\/integrations\/analyz)/);
                     if (match) {
                         window.__ANALYZ_BASE_PATH = match[1];
                     }
                 } else if (pathname.includes('/barcode')) {
-                    // Если путь /barcode, значит мы через прокси, базовый путь /integrations/analyz
+                    // Если путь /barcode (без /integrations/analyz), значит мы через прокси
+                    // Базовый путь должен быть /integrations/analyz
+                    window.__ANALYZ_BASE_PATH = '/integrations/analyz';
+                } else {
+                    // По умолчанию используем /integrations/analyz
                     window.__ANALYZ_BASE_PATH = '/integrations/analyz';
                 }
                 {% endif %}
                 
                 // Логируем для отладки
-                if (window.__ANALYZ_BASE_PATH) {
-                    console.log('[Barcode] Base path set to:', window.__ANALYZ_BASE_PATH);
-                } else {
-                    console.warn('[Barcode] Base path not set, using relative paths');
-                }
+                console.log('[Barcode] Location:', window.location.href);
+                console.log('[Barcode] Pathname:', window.location.pathname);
+                console.log('[Barcode] Port:', window.location.port);
+                console.log('[Barcode] Base path set to:', window.__ANALYZ_BASE_PATH);
             }
         })();
     </script>
